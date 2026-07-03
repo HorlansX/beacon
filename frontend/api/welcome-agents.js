@@ -10,14 +10,14 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 // are sub-2s, so 26h of blocks is comfortably under most RPC range limits
 // once chunked below.
 const LOOKBACK_BLOCKS = 50_000;
-const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
+const CHUNK_SIZE = 10_000; // Arc's own docs use a single 10,000-block eth_getLogs call safely — matching that here
 
 // Vercel Hobby caps function execution at 60s. Each welcome is a full signed
 // transaction (submit + wait for confirmation), so we only process a safe
 // batch per run and let the existing "already welcomed" check pick up any
 // backlog on the next run — this makes repeated/frequent runs safe and
 // self-resuming rather than needing a bigger timeout.
-const MAX_WELCOMES_PER_RUN = 15;
+const MAX_WELCOMES_PER_RUN = 8;
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -34,14 +34,17 @@ const ZERO_HASH = ethers.ZeroHash; // guaranteed-correct 32-byte zero hash, no h
 /* ---------- Helpers ---------- */
 
 // Query logs in chunks so we don't exceed the RPC provider's block-range limit.
+// Chunks are fired concurrently (not one-at-a-time) since these are independent
+// read calls — this matters a lot under Vercel's 60s execution cap.
 async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
-  const allEvents = [];
+  const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    const end = Math.min(start + chunkSize - 1, toBlock);
-    const events = await contract.queryFilter(filter, start, end);
-    allEvents.push(...events);
+    ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
   }
-  return allEvents;
+  const results = await Promise.all(
+    ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
+  );
+  return results.flat();
 }
 
 module.exports = async function handler(req, res) {
@@ -72,15 +75,15 @@ module.exports = async function handler(req, res) {
     const currentBlock = await provider.getBlockNumber();
     const fromBlock = Math.max(0, currentBlock - LOOKBACK_BLOCKS);
 
-    // 1. Find every agent identity minted in the lookback window.
+    // 1. Find every agent identity minted in the lookback window, and every
+    //    agent Beacon has already welcomed — run both scans concurrently
+    //    since they're independent reads, to stay well under the time limit.
     const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
-    const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, CHUNK_SIZE);
-
-    // 2. Find every agent Beacon has already welcomed, so we never repeat.
     const alreadyGivenFilter = reputationRead.filters.NewFeedback(null, beaconAddress);
-    const alreadyGivenEvents = await queryLogsChunked(
-      reputationRead, alreadyGivenFilter, fromBlock, currentBlock, CHUNK_SIZE
-    );
+    const [mints, alreadyGivenEvents] = await Promise.all([
+      queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, CHUNK_SIZE),
+      queryLogsChunked(reputationRead, alreadyGivenFilter, fromBlock, currentBlock, CHUNK_SIZE),
+    ]);
     const alreadyWelcomed = new Set(
       alreadyGivenEvents.map((e) => e.args.agentId.toString())
     );
