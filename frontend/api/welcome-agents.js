@@ -22,7 +22,7 @@ const REPUTATION_ABI = [
 ];
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000".slice(0, 66);
+const ZERO_HASH = ethers.ZeroHash; // guaranteed-correct 32-byte zero hash, no hand-counting
 
 /* ---------- Helpers ---------- */
 
