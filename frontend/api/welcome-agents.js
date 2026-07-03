@@ -12,6 +12,13 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const LOOKBACK_BLOCKS = 50_000;
 const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
 
+// Vercel Hobby caps function execution at 60s. Each welcome is a full signed
+// transaction (submit + wait for confirmation), so we only process a safe
+// batch per run and let the existing "already welcomed" check pick up any
+// backlog on the next run — this makes repeated/frequent runs safe and
+// self-resuming rather than needing a bigger timeout.
+const MAX_WELCOMES_PER_RUN = 15;
+
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ];
@@ -79,7 +86,8 @@ module.exports = async function handler(req, res) {
     );
 
     // 3. For each newly minted agent, welcome it (unless it's Beacon itself,
-    //    or already welcomed).
+    //    or already welcomed) — capped per run so we never risk timing out.
+    let welcomedThisRun = 0;
     for (const mint of mints) {
       const agentId = mint.args.tokenId;
       const owner = mint.args.to;
@@ -93,6 +101,10 @@ module.exports = async function handler(req, res) {
         log.push({ agentId: agentIdStr, status: "skipped", reason: "already welcomed" });
         continue;
       }
+      if (welcomedThisRun >= MAX_WELCOMES_PER_RUN) {
+        log.push({ agentId: agentIdStr, status: "deferred", reason: "per-run batch cap reached, will pick up next run" });
+        continue;
+      }
 
       try {
         const tx = await reputationWrite.giveFeedback(
@@ -103,6 +115,7 @@ module.exports = async function handler(req, res) {
           ZERO_HASH
         );
         await tx.wait();
+        welcomedThisRun++;
         log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
       } catch (err) {
         log.push({ agentId: agentIdStr, status: "error", reason: err.shortMessage || err.message });
