@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Beacon — Agent Registry for Arc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --paper: #EDEFEA;
+    --panel-dark: #0E1210;
+    --ink: #16213B;
+    --amber: #C68A2E;
+    --sage: #7A8B7F;
+    --line: rgba(22,33,59,0.14);
+    --card-bg: #F7F8F4;
+    --font-display: 'Newsreader', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+
+  /* Signal dot */
+  .signal-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--amber);
+    display: inline-block;
+    box-shadow: 0 0 0 0 rgba(198,138,46,0.5);
+    animation: pulse 2.2s infinite;
+  }
+  .signal-dot.inactive { background: var(--sage); animation: none; }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(198,138,46,0.45); }
+    70%  { box-shadow: 0 0 0 8px rgba(198,138,46,0); }
+    100% { box-shadow: 0 0 0 0 rgba(198,138,46,0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .signal-dot { animation: none; }
+  }
+
+  /* Header */
+  header {
+    background: var(--panel-dark);
+    color: var(--paper);
+    padding: 64px 32px 56px;
+  }
+  .header-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: clamp(36px, 5vw, 58px);
+    line-height: 1.08;
+    margin: 0 0 20px;
+    max-width: 14ch;
+  }
+  h1 em { font-style: italic; color: var(--amber); }
+  .lede {
+    font-size: 17px;
+    line-height: 1.6;
+    color: rgba(237,239,234,0.72);
+    max-width: 52ch;
+    margin: 0 0 32px;
+  }
+  .stat-row {
+    display: flex;
+    gap: 40px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(237,239,234,0.15);
+    padding-top: 24px;
+  }
+  .stat { font-family: var(--font-mono); }
+  .stat .num { font-size: 26px; color: var(--paper); display: block; }
+  .stat .label { font-size: 11px; color: var(--sage); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* Main */
+  main { max-width: 1080px; margin: 0 auto; padding: 48px 32px 96px; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .search-input {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    border-radius: 3px;
+    width: 260px;
+    color: var(--ink);
+  }
+  .search-input:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
+
+  button, .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 3px;
+    padding: 11px 20px;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #263457; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink); }
+
+  #wallet-status {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--sage);
+    align-self: center;
+  }
+
+  /* Tools dropdown */
+  .tools-dropdown { position: relative; }
+  .tools-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 6px 20px rgba(14,18,16,0.12);
+    min-width: 210px;
+    z-index: 5;
+    overflow: hidden;
+  }
+  .tools-menu.open { display: block; }
+  .tools-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .tools-menu button:hover { background: rgba(22,33,59,0.06); }
+  .tools-menu button + button { border-top: 1px solid var(--line); }
+
+  /* Celebration modal */
+  .celebrate-seal {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(198,138,46,0.12);
+    border: 2px solid var(--amber);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    margin-bottom: 18px;
+  }
+
+  /* Ledger grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .card {
+    background: var(--card-bg);
+    padding: 22px 22px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .card-id {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--sage);
+    letter-spacing: 0.04em;
+  }
+  .card-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    margin: 2px 0 0;
+  }
+  .card-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #3C4657;
+    flex-grow: 1;
+  }
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--sage);
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    color: var(--ink);
+  }
+  .card-link { font-size: 12px; text-decoration: underline; color: var(--ink); }
+  .card { cursor: pointer; }
+  .card:hover { background: #F1F3EC; }
+
+  .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge-chip {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(198,138,46,0.12);
+    color: var(--amber);
+    border: 1px solid rgba(198,138,46,0.3);
+    white-space: nowrap;
+  }
+  .badge-chip.identity { background: rgba(22,33,59,0.08); color: var(--ink); border-color: var(--line); }
+
+  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { font-family: var(--font-mono); font-size: 11px; color: var(--sage); text-transform: uppercase; }
+  .detail-value { text-align: right; max-width: 60%; word-break: break-word; }
+  .checker-result { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); display: none; }
+  .checker-stat { display: flex; justify-content: space-between; padding: 8px 0; font-family: var(--font-mono); font-size: 13px; }
+
+  .empty-state {
+    padding: 64px 24px;
+    text-align: center;
+    color: var(--sage);
+    font-family: var(--font-mono);
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(14,18,16,0.55);
+    align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 10;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--paper);
+    width: 100%; max-width: 480px;
+    border-radius: 4px;
+    padding: 32px;
+  }
+  .modal h2 { font-family: var(--font-display); font-weight: 500; margin: 0 0 6px; font-size: 24px; }
+  .modal p.sub { color: var(--sage); font-size: 13px; margin: 0 0 24px; }
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--sage);
+    margin-bottom: 6px;
+  }
+  .field input, .field textarea, .field select {
+    width: 100%;
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+  #form-status { font-family: var(--font-mono); font-size: 12px; margin-top: 12px; color: var(--sage); }
+
+  footer {
+    max-width: 1080px; margin: 0 auto; padding: 0 32px 64px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--sage);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="eyebrow"><span class="signal-dot"></span> Live registry &middot; Arc Testnet</div>
+    <h1>Every agent on Arc, <em>checking in</em>.</h1>
+    <p class="lede">Beacon is a permissionless directory where agents and builder projects on Arc register themselves so others can find, verify, and transact with them. One contract, one signal, no gatekeeper.</p>
+    <div class="stat-row">
+      <div class="stat"><span class="num" id="stat-total">—</span><span class="label">Registered</span></div>
+      <div class="stat"><span class="num" id="stat-active">—</span><span class="label">Active now</span></div>
+      <div class="stat"><span class="num" id="stat-network">5042002</span><span class="label">Chain ID</span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
+    <div style="display:flex; gap:12px; align-items:center;">
+      <span id="wallet-status">not connected</span>
+      <button class="btn-ghost" id="connect-btn">Connect wallet</button>
+      <div class="tools-dropdown">
+        <button class="btn-ghost" id="tools-btn">Tools ▾</button>
+        <div class="tools-menu" id="tools-menu">
+          <button id="checker-btn">Check testnet activity</button>
+          <button id="deploy-btn">Deploy agent identity</button>
+        </div>
+      </div>
+      <button class="btn-primary" id="register-btn">Register agent</button>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="empty-state" style="display:none;">No entries yet. Be the first signal on the beacon.</div>
+  <div class="empty-state" id="loading-state">Connecting to Arc testnet…</div>
+  <div class="empty-state" id="demo-banner" style="display:none; color: var(--amber);">
+    ⚠ Couldn't reach Arc testnet — showing demo data below, not your real registry.
+    <br/><button class="btn-ghost" id="retry-btn" style="margin-top: 10px;">Retry</button>
+  </div>
+</main>
+
+<footer>
+  Contract address is set in <code>CONFIG.registryAddress</code> below. Deploy <code>AgentRegistry.sol</code> to Arc testnet and paste the address to go live.
+</footer>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <h2>Register your agent</h2>
+    <p class="sub">This writes onchain. You'll sign a transaction and pay gas in USDC.</p>
+    <form id="register-form">
+      <div class="field">
+        <label for="f-name">Name</label>
+        <input id="f-name" required maxlength="64" placeholder="e.g. Argus Price Watcher" />
+      </div>
+      <div class="field">
+        <label for="f-desc">Description</label>
+        <textarea id="f-desc" required maxlength="280" placeholder="What does it do, and who is it for?"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-category">Category</label>
+        <select id="f-category">
+          <option value="trading">Trading</option>
+          <option value="payments">Payments</option>
+          <option value="infra">Infra / tooling</option>
+          <option value="defi">DeFi</option>
+          <option value="fx">FX / stablecoin</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-url">Link (repo, docs, or live app)</label>
+        <input id="f-url" type="url" placeholder="https://" />
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="modal-cancel">Cancel</button>
+        <button type="submit" class="btn-primary">Sign &amp; register</button>
+      </div>
+      <div id="form-status"></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="detail-backdrop">
+  <div class="modal">
+    <h2 id="detail-name"></h2>
+    <p class="sub" id="detail-id"></p>
+    <div class="badge-row" id="detail-badges" style="margin-bottom: 18px;"></div>
+    <p style="font-size: 14px; line-height: 1.6; margin-bottom: 8px;" id="detail-desc"></p>
+    <div class="detail-row"><span class="detail-label">Category</span><span class="detail-value" id="detail-category"></span></div>
+    <div class="detail-row"><span class="detail-label">Owner</span><span class="detail-value" id="detail-owner"></span></div>
+    <div class="detail-row"><span class="detail-label">Registered</span><span class="detail-value" id="detail-date"></span></div>
+    <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detail-status"></span></div>
+    <div class="detail-row" id="detail-link-row" style="display:none;"><span class="detail-label">Link</span><span class="detail-value"><a class="card-link" id="detail-link" target="_blank" rel="noopener">view →</a></span></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="detail-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="checker-backdrop">
+  <div class="modal">
+    <h2>Check testnet activity</h2>
+    <p class="sub">No registration required — see any wallet's real activity on Arc testnet.</p>
+    <div class="field">
+      <label for="checker-address">Wallet address</label>
+      <input id="checker-address" placeholder="0x..." />
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="checker-close">Close</button>
+      <button type="button" class="btn-primary" id="checker-run">Check</button>
+    </div>
+    <div id="checker-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 10px; color: var(--sage);"></div>
+    <div class="checker-result" id="checker-result">
+      <div class="checker-stat"><span>Transactions sent</span><span id="checker-txcount">—</span></div>
+      <div class="checker-stat"><span>USDC balance</span><span id="checker-balance">—</span></div>
+      <div class="checker-stat"><span>ERC-8004 identities held</span><span id="checker-identity">—</span></div>
+      <div class="badge-row" id="checker-badges" style="margin-top: 14px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="deploy-backdrop">
+  <div class="modal">
+    <h2>Deploy your agent identity</h2>
+    <p class="sub">Mints a real ERC-8004 identity NFT for your agent on Arc testnet — one signed transaction, no scripts required.</p>
+    <div class="field">
+      <label for="deploy-metadata">Metadata URI</label>
+      <input id="deploy-metadata" value="ipfs://bafkreibdi6623n3xpf7ymk62ckb4bo75o3qemwkpfvp5i25j66itxvsoei" />
+      <p style="font-size:11px; color: var(--sage); margin-top:6px;">Default is Arc's example metadata. Replace with your own IPFS URI (via Pinata, NFT.Storage, etc.) describing your agent for a real deployment.</p>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="deploy-close">Close</button>
+      <button type="button" class="btn-primary" id="deploy-run">Deploy identity</button>
+    </div>
+    <div id="deploy-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 10px; color: var(--sage);"></div>
+    <div id="deploy-result" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+      <div class="detail-row"><span class="detail-label">Agent ID</span><span class="detail-value" id="deploy-agentid"></span></div>
+      <div class="detail-row"><span class="detail-label">Transaction</span><span class="detail-value"><a class="card-link" id="deploy-txlink" target="_blank" rel="noopener">view on explorer →</a></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="celebrate-backdrop">
+  <div class="modal" style="text-align:center;">
+    <div class="celebrate-seal" style="margin-left:auto; margin-right:auto;">✓</div>
+    <h2 id="celebrate-title">Signal sent.</h2>
+    <p class="sub" id="celebrate-sub"></p>
+    <div id="celebrate-detail" style="font-family: var(--font-mono); font-size: 13px; color: var(--ink); margin: 12px 0 20px;"></div>
+    <div class="modal-actions" style="justify-content:center;">
+      <a class="btn-ghost" id="celebrate-link" target="_blank" rel="noopener" style="display:none; text-decoration:none;">View on explorer</a>
+      <button type="button" class="btn-primary" id="celebrate-close">Nice</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Configuration ---------- */
+const CONFIG = {
+  registryAddress: "0x3dEE45B67b8A3163fdBa98eE742931aAd6594477",
+  chainIdHex: "0x4CEF52", // 5042002
+  rpcUrl: "https://rpc.testnet.arc.network",
+  chainName: "Arc Testnet",
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
+  blockExplorerUrl: "https://testnet.arcscan.app"
+};
+
+const ABI = [
+  "function register(string name, string description, string category, string url) returns (uint256)",
+  "function totalAgents() view returns (uint256)",
+  "function getAgents(uint256 offset, uint256 limit) view returns (tuple(uint256 id,address owner,string name,string description,string category,string url,uint64 registeredAt,uint64 updatedAt,bool active)[])",
+  "event AgentRegistered(uint256 indexed id, address indexed owner, string name, string category)"
+];
+
+// Confirmed live on Arc testnet — see https://docs.arc.network/arc/tutorials/register-your-first-ai-agent
+const ERC8004 = {
+  identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+  reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+  validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272"
+};
+// Standard ERC-721 interface + confirmed register() signature from Arc's own docs.
+const IDENTITY_ABI = [
+  "function balanceOf(address owner) view returns (uint256)",
+  "function register(string metadataURI) returns ()",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
+];
+
+/* ---------- State ---------- */
+let provider, signer, contract;
+let agents = [];
+
+/* ---------- Demo fallback data (shown until a real contract address is set) ---------- */
+const DEMO_AGENTS = [
+  { id: 3, name: "Argus Price Watcher", description: "Monitors an onchain oracle and rebalances a USDC position using an LLM decision loop.", category: "trading", url: "#", owner: "0x7f2c...9a1e", active: true, registeredAt: Date.now()/1000 - 3600 },
+  { id: 2, name: "StableFX Router", description: "Routes cross-currency stablecoin swaps to the best available FX rate on Arc.", category: "fx", url: "#", owner: "0x14bd...22f0", active: true, registeredAt: Date.now()/1000 - 86400 },
+  { id: 1, name: "Vault Sentinel", description: "Watches lending positions and posts alerts before liquidation thresholds are hit.", category: "defi", url: "#", owner: "0xaa01...77c3", active: false, registeredAt: Date.now()/1000 - 172800 }
+];
+
+/* ---------- Rendering ---------- */
+function timeAgo(unixSeconds) {
+  const diff = Math.max(0, Date.now()/1000 - unixSeconds);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff/60) + "m ago";
+  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return Math.floor(diff/86400) + "d ago";
+}
+
+/* ---------- Badges ---------- */
+function badgesFor(agent) {
+  const badges = [];
+  if (agent.id <= 10) badges.push("🏅 Genesis Signal");
+  if (agent.url && agent.url !== "#") badges.push("🛠️ Builder");
+  if (agent.active) badges.push("🟢 Active Signal");
+  const daysOld = (Date.now()/1000 - agent.registeredAt) / 86400;
+  if (daysOld >= 30) badges.push("🕰️ Veteran");
+  return badges;
+}
+
+function renderBadgeRow(container, badges, extraClass) {
+  container.innerHTML = badges.map(b => `<span class="badge-chip ${extraClass || ""}">${escapeHtml(b)}</span>`).join("");
+}
+
+function shortAddr(addr) {
+  if (!addr) return "";
+  return addr.length > 12 ? addr.slice(0,6) + "…" + addr.slice(-4) : addr;
+}
+
+function renderAgents(list) {
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty-state");
+  grid.innerHTML = "";
+
+  if (list.length === 0) {
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  for (const a of list) {
+    const card = document.createElement("div");
+    card.className = "card";
+    const badges = badgesFor(a);
+    card.innerHTML = `
+      <div class="card-top">
+        <div>
+          <div class="card-id">BEACON-${String(a.id).padStart(4,"0")}</div>
+          <div class="card-name">${escapeHtml(a.name)}</div>
+        </div>
+        <span class="signal-dot ${a.active ? "" : "inactive"}" title="${a.active ? "active" : "inactive"}"></span>
+      </div>
+      <div class="card-desc">${escapeHtml(a.description)}</div>
+      ${badges.length ? `<div class="badge-row">${badges.map(b => `<span class="badge-chip">${escapeHtml(b)}</span>`).join("")}</div>` : ""}
+      <div class="card-meta">
+        <span class="tag">${escapeHtml(a.category || "other")}</span>
+        <span>${shortAddr(a.owner)} &middot; ${timeAgo(a.registeredAt)}</span>
+      </div>
+      ${a.url && a.url !== "#" ? `<a class="card-link" href="${escapeAttr(a.url)}" target="_blank" rel="noopener" data-internal-link="1">view →</a>` : ""}
+    `;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest("[data-internal-link]")) return; // let the link open normally
+      openDetail(a);
+    });
+    grid.appendChild(card);
+  }
+}
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str ?? "";
+  return d.innerHTML;
+}
+function escapeAttr(str) { return (str ?? "").replace(/"/g, "&quot;"); }
+
+function applyFilter() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  if (!q) return renderAgents(agents);
+  renderAgents(agents.filter(a =>
+    a.name.toLowerCase().includes(q) ||
+    a.description.toLowerCase().includes(q) ||
+    (a.category || "").toLowerCase().includes(q)
+  ));
+}
+
+function updateStats() {
+  document.getElementById("stat-total").textContent = agents.length;
+  document.getElementById("stat-active").textContent = agents.filter(a => a.active).length;
+}
+
+/* ---------- Contract reads ---------- */
+const MAX_ATTEMPTS = 8;
+
+async function loadAgents(attempt = 1) {
+  const isConfigured = CONFIG.registryAddress && CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000";
+
+  if (!isConfigured) {
+    agents = DEMO_AGENTS;
+    document.getElementById("loading-state").style.display = "none";
+    document.getElementById("demo-banner").style.display = "block";
+    updateStats();
+    applyFilter();
+    return;
+  }
+
+  document.getElementById("loading-state").style.display = "block";
+  document.getElementById("demo-banner").style.display = "none";
+
+  // Guard against the ethers CDN script not having finished loading yet.
+  if (typeof ethers === "undefined") {
+    if (attempt <= MAX_ATTEMPTS) {
+      console.warn(`ethers not ready yet, retrying (attempt ${attempt}/${MAX_ATTEMPTS})...`);
+      setTimeout(() => loadAgents(attempt + 1), 500 * attempt);
+      return;
+    }
+    console.error("ethers.js failed to load after retries, showing demo data.");
+    showDemoFallback();
+    return;
+  }
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const readContract = new ethers.Contract(CONFIG.registryAddress, ABI, readProvider);
+    const total = Number(await readContract.totalAgents());
+    const raw = total > 0 ? await readContract.getAgents(0, Math.min(total, 100)) : [];
+    agents = raw.map(a => ({
+      id: Number(a.id),
+      owner: a.owner,
+      name: a.name,
+      description: a.description,
+      category: a.category,
+      url: a.url,
+      registeredAt: Number(a.registeredAt),
+      active: a.active
+    }));
+    document.getElementById("loading-state").style.display = "none";
+    document.getElementById("demo-banner").style.display = "none";
+  } catch (err) {
+    if (attempt <= MAX_ATTEMPTS) {
+      // Exponential-ish backoff: gives slow RPC cold-starts or a security tool
+      // scanning the first request to a new domain plenty of time to clear.
+      const delay = Math.min(1000 * attempt, 6000);
+      console.warn(`Chain read failed, retrying in ${delay}ms (attempt ${attempt}/${MAX_ATTEMPTS})...`, err.message);
+      setTimeout(() => loadAgents(attempt + 1), delay);
+      return;
+    }
+    console.error("Failed to load from chain after all retries:", err);
+    showDemoFallback();
+    return;
+  }
+  updateStats();
+  applyFilter();
+}
+
+function showDemoFallback() {
+  agents = DEMO_AGENTS;
+  document.getElementById("loading-state").style.display = "none";
+  document.getElementById("demo-banner").style.display = "block";
+  updateStats();
+  applyFilter();
+}
+
+/* ---------- Wallet ---------- */
+async function connectWallet() {
+  if (!window.ethereum) {
+    document.getElementById("wallet-status").textContent = "no wallet found";
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+
+    // try to switch/add Arc testnet
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CONFIG.chainIdHex }] });
+    } catch (switchErr) {
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: CONFIG.chainIdHex,
+            chainName: CONFIG.chainName,
+            rpcUrls: [CONFIG.rpcUrl],
+            nativeCurrency: CONFIG.nativeCurrency,
+            blockExplorerUrls: [CONFIG.blockExplorerUrl]
+          }]
+        });
+      }
+    }
+
+    const addr = await signer.getAddress();
+    document.getElementById("wallet-status").textContent = shortAddr(addr);
+    document.getElementById("connect-btn").textContent = "Connected";
+
+    if (CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000") {
+      contract = new ethers.Contract(CONFIG.registryAddress, ABI, signer);
+    }
+  } catch (err) {
+    console.error(err);
+    document.getElementById("wallet-status").textContent = "connection failed";
+  }
+}
+
+/* ---------- Celebration ---------- */
+function celebrate({ title, sub, detail, explorerUrl }) {
+  document.getElementById("celebrate-title").textContent = title;
+  document.getElementById("celebrate-sub").textContent = sub || "";
+  document.getElementById("celebrate-detail").textContent = detail || "";
+  const link = document.getElementById("celebrate-link");
+  if (explorerUrl) {
+    link.href = explorerUrl;
+    link.style.display = "inline-block";
+  } else {
+    link.style.display = "none";
+  }
+  document.getElementById("celebrate-backdrop").classList.add("open");
+}
+document.getElementById("celebrate-close").addEventListener("click", () => {
+  document.getElementById("celebrate-backdrop").classList.remove("open");
+});
+document.getElementById("celebrate-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "celebrate-backdrop") document.getElementById("celebrate-backdrop").classList.remove("open");
+});
+
+/* ---------- Detail modal ---------- */
+async function openDetail(agent) {
+  document.getElementById("detail-name").textContent = agent.name;
+  document.getElementById("detail-id").textContent = `BEACON-${String(agent.id).padStart(4,"0")}`;
+  document.getElementById("detail-desc").textContent = agent.description;
+  document.getElementById("detail-category").textContent = agent.category || "other";
+  document.getElementById("detail-owner").textContent = agent.owner;
+  document.getElementById("detail-date").textContent = new Date(agent.registeredAt * 1000).toLocaleString();
+  document.getElementById("detail-status").textContent = agent.active ? "Active" : "Inactive";
+
+  const linkRow = document.getElementById("detail-link-row");
+  if (agent.url && agent.url !== "#") {
+    linkRow.style.display = "flex";
+    document.getElementById("detail-link").href = agent.url;
+  } else {
+    linkRow.style.display = "none";
+  }
+
+  const badges = badgesFor(agent);
+  renderBadgeRow(document.getElementById("detail-badges"), badges);
+
+  document.getElementById("detail-backdrop").classList.add("open");
+
+  // Live-check ERC-8004 identity for this agent's owner (best-effort, non-blocking on failure).
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+    const bal = await identityContract.balanceOf(agent.owner);
+    if (Number(bal) > 0) {
+      const current = badgesFor(agent);
+      current.push("🪪 Verified Identity (ERC-8004)");
+      renderBadgeRow(document.getElementById("detail-badges"), current);
+    }
+  } catch (err) {
+    console.warn("ERC-8004 identity check failed:", err.message);
+  }
+}
+document.getElementById("detail-close").addEventListener("click", () => {
+  document.getElementById("detail-backdrop").classList.remove("open");
+});
+document.getElementById("detail-backdrop").addEventListener("click", (e) => {
+  if (e.target.id === "detail-backdrop") document.getElementById("detail-backdrop").classList.remove("open");
+});
+
+/* ---------- Wallet activity checker ---------- */
+async function runActivityCheck() {
+  const addrInput = document.getElementById("checker-address").value.trim();
+  const status = document.getElementById("checker-status");
+  const result = document.getElementById("checker-result");
+
+  if (!ethers.isAddress(addrInput)) {
+    status.textContent = "Enter a valid address.";
+    result.style.display = "none";
+    return;
+  }
+
+  status.textContent = "Checking Arc testnet…";
+  result.style.display = "none";
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const [txCount, balanceWei, identityContract] = await Promise.all([
+      readProvider.getTransactionCount(addrInput),
+      readProvider.getBalance(addrInput),
+      Promise.resolve(new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider))
+    ]);
+    const identityBalance = await identityContract.balanceOf(addrInput);
+
+    document.getElementById("checker-txcount").textContent = txCount;
+    document.getElementById("checker-balance").textContent = ethers.formatEther(balanceWei) + " USDC";
+    document.getElementById("checker-identity").textContent = identityBalance.toString();
+
+    const badges = [];
+    if (txCount > 0) badges.push("🟢 Active on Arc");
+    if (txCount >= 20) badges.push("⚡ Power User");
+    if (Number(identityBalance) > 0) badges.push("🪪 Registered Identity (ERC-8004)");
+    renderBadgeRow(document.getElementById("checker-badges"), badges, "identity");
+
+    status.textContent = "";
+    result.style.display = "block";
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Couldn't reach Arc testnet — try again in a moment.";
+  }
+}
+
+function openChecker() {
+  document.getElementById("checker-backdrop").classList.add("open");
+  document.getElementById("checker-result").style.display = "none";
+  document.getElementById("checker-status").textContent = "";
+  if (signer) {
+    signer.getAddress().then(a => document.getElementById("checker-address").value = a).catch(() => {});
+  }
+}
+function closeChecker() { document.getElementById("checker-backdrop").classList.remove("open"); }
+
+/* ---------- Deploy agent identity (ERC-8004) ---------- */
+function openDeploy() {
+  document.getElementById("deploy-backdrop").classList.add("open");
+  document.getElementById("deploy-result").style.display = "none";
+  document.getElementById("deploy-status").textContent = "";
+}
+function closeDeploy() { document.getElementById("deploy-backdrop").classList.remove("open"); }
+
+async function runDeploy() {
+  const status = document.getElementById("deploy-status");
+  const metadataURI = document.getElementById("deploy-metadata").value.trim();
+
+  if (!signer) {
+    status.textContent = "Connect your wallet first.";
+    return;
+  }
+  if (!metadataURI) {
+    status.textContent = "Enter a metadata URI.";
+    return;
+  }
+
+  try {
+    const identityWrite = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, signer);
+    status.textContent = "Waiting for signature…";
+    const tx = await identityWrite.register(metadataURI);
+    status.textContent = "Confirming onchain…";
+    const receipt = await tx.wait();
+
+    // Find the Transfer event in this receipt to learn the minted agent ID.
+    const iface = new ethers.Interface(IDENTITY_ABI);
+    let agentId = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsed = iface.parseLog(log);
+        if (parsed && parsed.name === "Transfer") {
+          agentId = parsed.args.tokenId.toString();
+          break;
+        }
+      } catch (_) { /* not this contract's event, skip */ }
+    }
+
+    status.textContent = "Deployed.";
+    document.getElementById("deploy-agentid").textContent = agentId ?? "(check explorer)";
+    document.getElementById("deploy-txlink").href = `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`;
+    document.getElementById("deploy-result").style.display = "block";
+    closeDeploy();
+    celebrate({
+      title: "Agent identity deployed 🎉",
+      sub: "Your agent now has a real, onchain ERC-8004 identity on Arc.",
+      detail: agentId ? `Agent ID #${agentId}` : "",
+      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
+    });
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Transaction failed or was rejected.";
+  }
+}
+
+/* ---------- Registration form ---------- */
+function openModal() { document.getElementById("modal-backdrop").classList.add("open"); }
+function closeModal() {
+  document.getElementById("modal-backdrop").classList.remove("open");
+  document.getElementById("form-status").textContent = "";
+}
+
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const status = document.getElementById("form-status");
+
+  const name = document.getElementById("f-name").value.trim();
+  const description = document.getElementById("f-desc").value.trim();
+  const category = document.getElementById("f-category").value;
+  const url = document.getElementById("f-url").value.trim();
+
+  if (!signer) {
+    status.textContent = "Connect your wallet first.";
+    return;
+  }
+  if (!contract) {
+    status.textContent = "Registry contract address isn't configured yet — set CONFIG.registryAddress after deploying.";
+    return;
+  }
+
+  try {
+    status.textContent = "Waiting for signature…";
+    const tx = await contract.register(name, description, category, url);
+    status.textContent = "Confirming onchain…";
+    await tx.wait();
+    status.textContent = "Registered. Refreshing list…";
+    await loadAgents();
+    closeModal();
+    celebrate({
+      title: "You're on the Beacon 🎉",
+      sub: `"${name}" is now live in the registry for anyone on Arc to find.`,
+      detail: "",
+      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
+    });
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Transaction failed or was rejected.";
+  }
+}
+
+/* ---------- Wire up ---------- */
+document.getElementById("connect-btn").addEventListener("click", connectWallet);
+document.getElementById("register-btn").addEventListener("click", openModal);
+document.getElementById("tools-btn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  document.getElementById("tools-menu").classList.toggle("open");
+});
+document.addEventListener("click", () => document.getElementById("tools-menu").classList.remove("open"));
+document.getElementById("checker-btn").addEventListener("click", openChecker);
+document.getElementById("checker-close").addEventListener("click", closeChecker);
+document.getElementById("checker-run").addEventListener("click", runActivityCheck);
+document.getElementById("checker-backdrop").addEventListener("click", (e) => { if (e.target.id === "checker-backdrop") closeChecker(); });
+document.getElementById("deploy-btn").addEventListener("click", openDeploy);
+document.getElementById("deploy-close").addEventListener("click", closeDeploy);
+document.getElementById("deploy-run").addEventListener("click", runDeploy);
+document.getElementById("deploy-backdrop").addEventListener("click", (e) => { if (e.target.id === "deploy-backdrop") closeDeploy(); });
+document.getElementById("modal-cancel").addEventListener("click", closeModal);
+document.getElementById("register-form").addEventListener("submit", handleRegisterSubmit);
+document.getElementById("search").addEventListener("input", applyFilter);
+document.getElementById("modal-backdrop").addEventListener("click", (e) => { if (e.target.id === "modal-backdrop") closeModal(); });
+
+document.getElementById("retry-btn").addEventListener("click", () => loadAgents());
+
+if (document.readyState === "complete") {
+  setTimeout(() => loadAgents(), 800);
+} else {
+  window.addEventListener("load", () => setTimeout(() => loadAgents(), 800));
+}
+</script>
+</body>
+</html>
