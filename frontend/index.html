@@ -30,6 +30,51 @@
   }
   a { color: inherit; }
 
+  /* Fixed top wallet bar */
+  body { padding-top: 52px; }
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 52px;
+    background: var(--ink);
+    color: var(--paper);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(237,239,234,0.12);
+  }
+  .top-bar-inner {
+    max-width: 1080px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .top-bar-brand {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  .top-bar-wallet { display: flex; align-items: center; gap: 12px; }
+  #wallet-status {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: rgba(237,239,234,0.65);
+  }
+  .top-bar .btn-ghost {
+    background: transparent;
+    color: var(--paper);
+    border: 1px solid rgba(237,239,234,0.35);
+    padding: 7px 16px;
+    font-size: 13px;
+  }
+  .top-bar .btn-ghost:hover { border-color: var(--paper); }
+
   /* Signal dot */
   .signal-dot {
     width: 7px; height: 7px; border-radius: 50%;
@@ -281,7 +326,7 @@
     background: rgba(14,18,16,0.55);
     align-items: center; justify-content: center;
     padding: 24px;
-    z-index: 10;
+    z-index: 60;
   }
   .modal-backdrop.open { display: flex; }
   .modal {
@@ -324,6 +369,16 @@
 </head>
 <body>
 
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <span class="top-bar-brand">Beacon</span>
+    <div class="top-bar-wallet">
+      <span id="wallet-status">not connected</span>
+      <button class="btn-ghost" id="connect-btn">Connect wallet</button>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="header-inner">
     <div class="eyebrow"><span class="signal-dot"></span> Live registry &middot; Arc Testnet</div>
@@ -332,7 +387,6 @@
     <div class="stat-row">
       <div class="stat"><span class="num" id="stat-total">—</span><span class="label">Registered</span></div>
       <div class="stat"><span class="num" id="stat-active">—</span><span class="label">Active now</span></div>
-      <div class="stat"><span class="num" id="stat-network">5042002</span><span class="label">Chain ID</span></div>
     </div>
   </div>
 </header>
@@ -341,8 +395,6 @@
   <div class="toolbar">
     <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
     <div style="display:flex; gap:12px; align-items:center;">
-      <span id="wallet-status">not connected</span>
-      <button class="btn-ghost" id="connect-btn">Connect wallet</button>
       <div class="tools-dropdown">
         <button class="btn-ghost" id="tools-btn">Tools ▾</button>
         <div class="tools-menu" id="tools-menu">
