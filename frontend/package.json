@@ -2,7 +2,13 @@
   "name": "beacon-frontend",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "dev": "serve ."
+  },
   "dependencies": {
     "ethers": "6.13.1"
+  },
+  "devDependencies": {
+    "serve": "^14.2.3"
   }
 }
