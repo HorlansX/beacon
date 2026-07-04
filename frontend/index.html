@@ -528,39 +528,34 @@
   <div class="grid" id="templates-grid" style="display:none;"></div>
 
   <div id="lending-panel" style="display:none;">
-    <div class="lending-pool-stats">
-      <div class="stat"><span class="num" id="lending-liquidity">—</span><span class="label">Pool liquidity (USDC)</span></div>
+    <div class="lending-pool-stats" style="display:none;">
+      <div class="stat"><span class="num" id="lending-liquidity">—</span><span class="label">Pool liquidity (Mock USDC)</span></div>
       <div class="stat"><span class="num" id="lending-factor">—</span><span class="label">Collateral factor</span></div>
-      <a class="card-link" id="lending-contract-link" target="_blank" rel="noopener" style="align-self:center;">view contract →</a>
     </div>
-    <p style="font-size:12px; color: var(--sage); font-family: var(--font-mono); margin: 10px 0 24px;">
-      ⚠ cirBTC (the collateral token) has no public faucet — obtain it via Circle's Discord. The USDC loan token below is freely mintable for testing.
-    </p>
-
     <div id="lending-connect-prompt" style="display:none;" class="empty-state">Connect your wallet above to use the lending pool.</div>
 
     <div id="lending-position" style="display:none;">
       <div class="lending-position-row">
         <div class="detail-row"><span class="detail-label">Your cirBTC collateral</span><span class="detail-value" id="pos-collateral">—</span></div>
-        <div class="detail-row"><span class="detail-label">Active loan (USDC owed)</span><span class="detail-value" id="pos-loan">—</span></div>
+        <div class="detail-row"><span class="detail-label">Active loan (Mock USDC owed)</span><span class="detail-value" id="pos-loan">—</span></div>
         <div class="detail-row"><span class="detail-label">Max you can borrow</span><span class="detail-value" id="pos-maxborrow">—</span></div>
         <div class="detail-row"><span class="detail-label">Available to withdraw</span><span class="detail-value" id="pos-available">—</span></div>
       </div>
 
       <div class="lending-actions">
         <div class="lending-action">
-          <button class="btn-ghost" id="faucet-usdc-btn">Get 1,000 test USDC</button>
+          <button class="btn-ghost" id="faucet-usdc-btn">Get 1,000 Mock USDC</button>
         </div>
         <div class="lending-action">
           <input class="search-input" id="deposit-amount" placeholder="cirBTC amount" style="width:140px;" />
           <button class="btn-primary" id="deposit-btn">Deposit collateral</button>
         </div>
         <div class="lending-action">
-          <input class="search-input" id="borrow-amount" placeholder="USDC amount" style="width:140px;" />
+          <input class="search-input" id="borrow-amount" placeholder="Mock USDC amount" style="width:140px;" />
           <button class="btn-primary" id="borrow-btn">Borrow USDC</button>
         </div>
         <div class="lending-action">
-          <input class="search-input" id="repay-amount" placeholder="USDC amount" style="width:140px;" />
+          <input class="search-input" id="repay-amount" placeholder="Mock USDC amount" style="width:140px;" />
           <button class="btn-primary" id="repay-btn">Repay loan</button>
         </div>
         <div class="lending-action">
@@ -594,10 +589,6 @@
     <p id="identities-sub" style="font-family: var(--font-mono); font-size: 12px; color: var(--sage); margin-top: 18px;">Every agent that has registered a real onchain identity on Arc's official ERC-8004 registry — not just those checked into Beacon.</p>
   </div>
 </section>
-
-<footer>
-  Contract address is set in <code>CONFIG.registryAddress</code> below. Deploy <code>AgentRegistry.sol</code> to Arc testnet and paste the address to go live.
-</footer>
 
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal">
@@ -1302,7 +1293,6 @@ function fromUnits(bn) {
 }
 
 async function loadLendingPanel() {
-  document.getElementById("lending-contract-link").href = `${CONFIG.blockExplorerUrl}/address/${LENDING.lendingAddress}`;
 
   try {
     const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
@@ -1340,8 +1330,8 @@ async function refreshLendingPosition() {
       lendingRead.availableCollateral(addr)
     ]);
     document.getElementById("pos-collateral").textContent = fromUnits(collateral) + " cirBTC";
-    document.getElementById("pos-loan").textContent = loan.isActive ? fromUnits(loan.amount) + " USDC" : "No active loan";
-    document.getElementById("pos-maxborrow").textContent = fromUnits(maxBorrow) + " USDC";
+    document.getElementById("pos-loan").textContent = loan.isActive ? fromUnits(loan.amount) + " Mock USDC" : "No active loan";
+    document.getElementById("pos-maxborrow").textContent = fromUnits(maxBorrow) + " Mock USDC";
     document.getElementById("pos-available").textContent = fromUnits(available) + " cirBTC";
   } catch (err) {
     console.error("Failed to load position:", err);
@@ -1373,11 +1363,11 @@ async function handleFaucetUsdc() {
   try {
     const usdc = new ethers.Contract(LENDING.usdcAddress, ERC20_ABI, signer);
     const addr = await signer.getAddress();
-    lendingStatus("Minting test USDC…");
+    lendingStatus("Minting Mock USDC…");
     const tx = await usdc.allocateTo(addr, toUnits("1000"));
     await tx.wait();
-    lendingStatus("Minted 1,000 test USDC.");
-    celebrate({ title: "Test USDC minted 🎉", sub: "1,000 mock USDC landed in your wallet — ready to repay a loan or explore the pool.", explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
+    lendingStatus("Minted 1,000 Mock USDC.");
+    celebrate({ title: "Mock USDC minted 🎉", sub: "1,000 Mock USDC landed in your wallet — ready to repay a loan or explore the pool.", explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
     console.error(err);
     lendingStatus("Mint failed: " + (err.shortMessage || err.message));
@@ -1404,7 +1394,7 @@ async function handleDeposit() {
 async function handleBorrow() {
   if (!signer) return lendingStatus("Connect your wallet first.");
   const amount = document.getElementById("borrow-amount").value;
-  if (!amount) return lendingStatus("Enter a USDC amount.");
+  if (!amount) return lendingStatus("Enter a Mock USDC amount.");
   try {
     const units = toUnits(amount);
     const lending = new ethers.Contract(LENDING.lendingAddress, LENDING_ABI, signer);
@@ -1414,7 +1404,7 @@ async function handleBorrow() {
     await tx.wait();
     lendingStatus("Loan taken.");
     await refreshLendingPosition();
-    celebrate({ title: "Loan taken 🎉", sub: `${amount} USDC borrowed against your cirBTC collateral.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
+    celebrate({ title: "Loan taken 🎉", sub: `${amount} Mock USDC borrowed against your cirBTC collateral.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
     console.error(err);
     lendingStatus("Borrow failed: " + (err.shortMessage || err.message));
@@ -1424,14 +1414,14 @@ async function handleBorrow() {
 async function handleRepay() {
   if (!signer) return lendingStatus("Connect your wallet first.");
   const amount = document.getElementById("repay-amount").value;
-  if (!amount) return lendingStatus("Enter a USDC amount.");
+  if (!amount) return lendingStatus("Enter a Mock USDC amount.");
   try {
     const units = toUnits(amount);
     const lending = new ethers.Contract(LENDING.lendingAddress, LENDING_ABI, signer);
     const tx = await approveAndCall(LENDING.usdcAddress, units, () => lending.repayLoan(units));
     lendingStatus("Loan repaid.");
     await refreshLendingPosition();
-    celebrate({ title: "Loan repaid 🎉", sub: `${amount} USDC paid back.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
+    celebrate({ title: "Loan repaid 🎉", sub: `${amount} Mock USDC paid back.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
     console.error(err);
     lendingStatus("Repay failed: " + (err.shortMessage || err.message));
