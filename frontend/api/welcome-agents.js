@@ -10,9 +10,16 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 // are sub-2s, so 26h of blocks is comfortably under most RPC range limits
 // once chunked below.
 const LOOKBACK_BLOCKS = 50_000;
-const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
+const CHUNK_SIZE = 10_000; // Arc's own docs use a single 10,000-block eth_getLogs call safely
 const MAX_WELCOMES_PER_RUN = 60; // hard ceiling, in case sends are unusually fast
-const TIME_BUDGET_MS = 100_000; // stop sending new tx once this elapsed, leaving margin under maxDuration
+
+// IMPORTANT: Vercel's Hobby plan hard-kills this function at 60,000ms no
+// matter what — that's a platform limit, not something this code controls.
+// This budget must sit comfortably UNDER that wall, with margin left over
+// for the scan phase (before this loop even starts) and for writing the
+// final response. 100,000ms here would never fire, since the platform
+// would kill the function 40 seconds earlier regardless.
+const TIME_BUDGET_MS = 42_000;
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -60,6 +67,7 @@ module.exports = async function handler(req, res) {
 
   const log = [];
   const startTime = Date.now();
+  const elapsed = () => `${Date.now() - startTime}ms`;
   try {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const wallet = new ethers.Wallet(privateKey, provider);
@@ -69,8 +77,10 @@ module.exports = async function handler(req, res) {
     const reputationRead = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
     const reputationWrite = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, wallet);
 
+    console.log(`[${elapsed()}] fetching current block`);
     const currentBlock = await provider.getBlockNumber();
     const fromBlock = Math.max(0, currentBlock - LOOKBACK_BLOCKS);
+    console.log(`[${elapsed()}] current block ${currentBlock}, scanning from ${fromBlock}`);
 
     // 1. Find every agent identity minted in the lookback window, and every
     //    agent Beacon has already welcomed — at the same time.
@@ -81,6 +91,7 @@ module.exports = async function handler(req, res) {
       queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, CHUNK_SIZE),
       queryLogsChunked(reputationRead, alreadyGivenFilter, fromBlock, currentBlock, CHUNK_SIZE),
     ]);
+    console.log(`[${elapsed()}] scans done — ${mints.length} mints, ${alreadyGivenEvents.length} already-welcomed`);
 
     const alreadyWelcomed = new Set(
       alreadyGivenEvents.map((e) => e.args.agentId.toString())
@@ -113,6 +124,7 @@ module.exports = async function handler(req, res) {
       }
 
       try {
+        console.log(`[${elapsed()}] sending giveFeedback for agent ${agentIdStr}`);
         const tx = await reputationWrite.giveFeedback(
           agentId,
           95, 0,
@@ -120,14 +132,18 @@ module.exports = async function handler(req, res) {
           "", "",
           ZERO_HASH
         );
+        console.log(`[${elapsed()}] tx sent ${tx.hash}, waiting for confirmation`);
         await tx.wait();
+        console.log(`[${elapsed()}] confirmed agent ${agentIdStr}`);
         sentThisRun++;
         log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
       } catch (err) {
+        console.log(`[${elapsed()}] error on agent ${agentIdStr}: ${err.shortMessage || err.message}`);
         log.push({ agentId: agentIdStr, status: "error", reason: err.shortMessage || err.message });
       }
     }
 
+    console.log(`[${elapsed()}] all done, welcomed ${sentThisRun} this run`);
     res.status(200).json({
       ok: true,
       scannedBlocks: [fromBlock, currentBlock],
@@ -135,6 +151,7 @@ module.exports = async function handler(req, res) {
       results: log,
     });
   } catch (err) {
+    console.log(`[${elapsed()}] FATAL: ${err.shortMessage || err.message}`);
     res.status(500).json({ ok: false, error: err.shortMessage || err.message, results: log });
   }
 };
