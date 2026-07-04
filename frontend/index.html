@@ -450,6 +450,16 @@
   </div>
 </header>
 
+<section class="network-stats">
+  <div class="network-stats-inner">
+    <div class="network-stats-eyebrow"><span class="signal-dot"></span> Beacon network activity</div>
+    <div class="stat-row">
+      <div class="stat"><span class="num" id="stat-total">—</span><span class="label">Registered</span></div>
+      <div class="stat"><span class="num" id="stat-active">—</span><span class="label">Active now</span></div>
+    </div>
+  </div>
+</section>
+
 <main>
   <div class="toolbar">
     <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
@@ -463,16 +473,6 @@
     <br/><button class="btn-ghost" id="retry-btn" style="margin-top: 10px;">Retry</button>
   </div>
 </main>
-
-<section class="network-stats">
-  <div class="network-stats-inner">
-    <div class="network-stats-eyebrow"><span class="signal-dot"></span> Beacon network activity</div>
-    <div class="stat-row">
-      <div class="stat"><span class="num" id="stat-total">—</span><span class="label">Registered</span></div>
-      <div class="stat"><span class="num" id="stat-active">—</span><span class="label">Active now</span></div>
-    </div>
-  </div>
-</section>
 
 <footer>
   Contract address is set in <code>CONFIG.registryAddress</code> below. Deploy <code>AgentRegistry.sol</code> to Arc testnet and paste the address to go live.
