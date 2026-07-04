@@ -470,7 +470,9 @@
     <div class="stat-row">
       <div class="stat"><span class="num" id="stat-total">—</span><span class="label">Registered</span></div>
       <div class="stat"><span class="num" id="stat-active">—</span><span class="label">Active now</span></div>
+      <div class="stat"><span class="num" id="stat-welcomed">—</span><span class="label">Welcomed on Arc</span></div>
     </div>
+    <p id="welcomed-sub" style="font-family: var(--font-mono); font-size: 12px; color: var(--sage); margin-top: 18px;"></p>
   </div>
 </section>
 
@@ -619,6 +621,14 @@ const IDENTITY_ABI = [
   "function register(string metadataURI) returns ()",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
 ];
+const REPUTATION_ABI = [
+  "event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
+];
+// Beacon's own dedicated wallet — the one the daily cron uses to autonomously
+// welcome new agents on Arc's official ERC-8004 reputation registry. This is
+// a public address, safe to reference directly in the frontend.
+const BEACON_WALLET_ADDRESS = "0x10149142bA352e37D2225b12F47FE306a8cD5250";
+const WELCOME_LOOKBACK_BLOCKS = 500_000; // generous but bounded, keeps the scan fast
 
 /* ---------- State ---------- */
 let provider, signer, contract;
@@ -727,6 +737,43 @@ function applyFilter() {
 function updateStats() {
   document.getElementById("stat-total").textContent = agents.length;
   document.getElementById("stat-active").textContent = agents.filter(a => a.active).length;
+}
+
+/* ---------- Beacon's own welcome activity (real onchain feedback given) ---------- */
+// Counts NewFeedback events where Beacon's own wallet is the client — i.e.
+// agents Beacon has actually, autonomously welcomed via the daily cron.
+// Chunked + parallel, same pattern already proven reliable server-side.
+async function pollWelcomeActivity() {
+  const subEl = document.getElementById("welcomed-sub");
+  const statEl = document.getElementById("stat-welcomed");
+  if (typeof ethers === "undefined") return;
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const reputation = new ethers.Contract(ERC8004.reputationRegistry, REPUTATION_ABI, readProvider);
+    const filter = reputation.filters.NewFeedback(null, BEACON_WALLET_ADDRESS);
+
+    const currentBlock = await readProvider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
+    const chunkSize = 10_000;
+
+    const ranges = [];
+    for (let start = fromBlock; start <= currentBlock; start += chunkSize) {
+      ranges.push([start, Math.min(start + chunkSize - 1, currentBlock)]);
+    }
+    const chunks = await Promise.all(
+      ranges.map(([start, end]) => reputation.queryFilter(filter, start, end))
+    );
+    const count = chunks.flat().length;
+
+    statEl.textContent = count;
+    subEl.innerHTML = count > 0
+      ? `Beacon autonomously welcomes new agents it finds on Arc's official identity registry, once a day — <a href="${CONFIG.blockExplorerUrl}/address/${BEACON_WALLET_ADDRESS}" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">view Beacon's wallet →</a>`
+      : `Beacon is watching Arc's identity registry for new agents to welcome — none yet in the current window.`;
+  } catch (err) {
+    statEl.textContent = "—";
+    subEl.textContent = "Couldn't reach Arc testnet to check welcome activity right now.";
+  }
 }
 
 /* ---------- Contract reads ---------- */
@@ -1131,9 +1178,12 @@ document.getElementById("retry-btn").addEventListener("click", () => loadAgents(
 
 if (document.readyState === "complete") {
   setTimeout(() => loadAgents(), 800);
+  pollWelcomeActivity();
 } else {
-  window.addEventListener("load", () => setTimeout(() => loadAgents(), 800));
+  window.addEventListener("load", () => { setTimeout(() => loadAgents(), 800); pollWelcomeActivity(); });
 }
+// Heavier scan than the agent registry read, so it refreshes less often.
+setInterval(pollWelcomeActivity, 90000);
 </script>
 </body>
 </html>
