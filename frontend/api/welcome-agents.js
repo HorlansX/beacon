@@ -11,7 +11,8 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 // once chunked below.
 const LOOKBACK_BLOCKS = 50_000;
 const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
-const MAX_WELCOMES_PER_RUN = 15; // cap on-chain sends per invocation so we never time out; remainder picked up next run
+const MAX_WELCOMES_PER_RUN = 60; // hard ceiling, in case sends are unusually fast
+const TIME_BUDGET_MS = 100_000; // stop sending new tx once this elapsed, leaving margin under maxDuration
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -58,6 +59,7 @@ module.exports = async function handler(req, res) {
   }
 
   const log = [];
+  const startTime = Date.now();
   try {
     const provider = new ethers.JsonRpcProvider(RPC_URL);
     const wallet = new ethers.Wallet(privateKey, provider);
@@ -100,8 +102,13 @@ module.exports = async function handler(req, res) {
         log.push({ agentId: agentIdStr, status: "skipped", reason: "already welcomed" });
         continue;
       }
-      if (sentThisRun >= MAX_WELCOMES_PER_RUN) {
-        log.push({ agentId: agentIdStr, status: "deferred", reason: "per-run cap reached, will pick up next run" });
+      const outOfTime = (Date.now() - startTime) > TIME_BUDGET_MS;
+      if (sentThisRun >= MAX_WELCOMES_PER_RUN || outOfTime) {
+        log.push({
+          agentId: agentIdStr,
+          status: "deferred",
+          reason: outOfTime ? "time budget reached, will pick up next run" : "per-run cap reached, will pick up next run",
+        });
         continue;
       }
 
