@@ -8,7 +8,7 @@
   ],
   "functions": {
     "api/welcome-agents.js": {
-      "maxDuration": 60
+      "maxDuration": 120
     }
   }
 }

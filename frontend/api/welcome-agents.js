@@ -10,15 +10,7 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 // are sub-2s, so 26h of blocks is comfortably under most RPC range limits
 // once chunked below.
 const LOOKBACK_BLOCKS = 50_000;
-const CHUNK_SIZE = 10_000; // Arc's own docs use a single 10,000-block eth_getLogs call safely — matching that here
-
-// Vercel Hobby caps function execution at 60s. Each welcome is a full signed
-// transaction (submit + wait for confirmation). The last real run confirmed
-// 8 welcomes + a full 50k-block scan finished comfortably inside 60s, so we
-// have headroom — raising to 15 to clear the backlog faster. If this starts
-// timing out, drop it back down; the "already welcomed" check makes this
-// safe to tune without losing any progress.
-const MAX_WELCOMES_PER_RUN = 15;
+const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -30,17 +22,18 @@ const REPUTATION_ABI = [
 ];
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const ZERO_HASH = ethers.ZeroHash; // guaranteed-correct 32-byte zero hash, no hand-counting
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000".slice(0, 66);
 
 /* ---------- Helpers ---------- */
 
-// Query logs in chunks so we don't exceed the RPC provider's block-range limit.
-// Chunks are fired concurrently (not one-at-a-time) since these are independent
-// read calls — this matters a lot under Vercel's 60s execution cap.
+// Query logs in parallel chunks so we don't exceed the RPC provider's
+// block-range limit, and don't blow the function's time budget doing it
+// one chunk at a time.
 async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
+    const end = Math.min(start + chunkSize - 1, toBlock);
+    ranges.push([start, end]);
   }
   const results = await Promise.all(
     ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
@@ -77,21 +70,21 @@ module.exports = async function handler(req, res) {
     const fromBlock = Math.max(0, currentBlock - LOOKBACK_BLOCKS);
 
     // 1. Find every agent identity minted in the lookback window, and every
-    //    agent Beacon has already welcomed — run both scans concurrently
-    //    since they're independent reads, to stay well under the time limit.
+    //    agent Beacon has already welcomed — at the same time.
     const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
     const alreadyGivenFilter = reputationRead.filters.NewFeedback(null, beaconAddress);
+
     const [mints, alreadyGivenEvents] = await Promise.all([
       queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, CHUNK_SIZE),
       queryLogsChunked(reputationRead, alreadyGivenFilter, fromBlock, currentBlock, CHUNK_SIZE),
     ]);
+
     const alreadyWelcomed = new Set(
       alreadyGivenEvents.map((e) => e.args.agentId.toString())
     );
 
     // 3. For each newly minted agent, welcome it (unless it's Beacon itself,
-    //    or already welcomed) — capped per run so we never risk timing out.
-    let welcomedThisRun = 0;
+    //    or already welcomed).
     for (const mint of mints) {
       const agentId = mint.args.tokenId;
       const owner = mint.args.to;
@@ -105,10 +98,6 @@ module.exports = async function handler(req, res) {
         log.push({ agentId: agentIdStr, status: "skipped", reason: "already welcomed" });
         continue;
       }
-      if (welcomedThisRun >= MAX_WELCOMES_PER_RUN) {
-        log.push({ agentId: agentIdStr, status: "deferred", reason: "per-run batch cap reached, will pick up next run" });
-        continue;
-      }
 
       try {
         const tx = await reputationWrite.giveFeedback(
@@ -119,7 +108,6 @@ module.exports = async function handler(req, res) {
           ZERO_HASH
         );
         await tx.wait();
-        welcomedThisRun++;
         log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
       } catch (err) {
         log.push({ agentId: agentIdStr, status: "error", reason: err.shortMessage || err.message });
