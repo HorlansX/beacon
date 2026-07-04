@@ -800,10 +800,29 @@ async function pollWelcomeActivity() {
 // whether or not it's registered on Beacon or has ever received feedback.
 async function pollIdentityCount() {
   const statEl = document.getElementById("stat-identities");
+  const subEl = document.getElementById("identities-sub");
   if (typeof ethers === "undefined") return;
 
+  const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+
+  // Try the cheap, exact route first: if the registry exposes totalSupply(),
+  // that's the true all-time count in a single call, no scanning needed.
   try {
-    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const supplyAbi = ["function totalSupply() view returns (uint256)"];
+    const identitySupply = new ethers.Contract(ERC8004.identityRegistry, supplyAbi, readProvider);
+    const total = await identitySupply.totalSupply();
+    statEl.textContent = Number(total).toLocaleString();
+    subEl.textContent = "Every agent that has registered a real onchain identity on Arc's official ERC-8004 registry — not just those checked into Beacon.";
+    return;
+  } catch (err) {
+    // No totalSupply() exposed — fall through to event-scanning below.
+  }
+
+  // Fallback: count mint events within a bounded window. Arc's own docs use
+  // this same event-scanning approach, since the base contract doesn't
+  // expose a supply counter — so this is scoped to a recent window, not
+  // full history, and labeled honestly as such.
+  try {
     const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
     const filter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
 
@@ -811,7 +830,8 @@ async function pollIdentityCount() {
     const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
     const mints = await queryLogsChunked(identity, filter, fromBlock, currentBlock, 10_000);
 
-    statEl.textContent = mints.length.toLocaleString();
+    statEl.textContent = mints.length.toLocaleString() + "+";
+    subEl.textContent = `Counted from the last ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()} blocks — older identities may exist beyond this window, so this is a lower bound, not the full all-time total.`;
   } catch (err) {
     statEl.textContent = "—";
   }
