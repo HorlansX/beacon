@@ -11,6 +11,7 @@ const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 // once chunked below.
 const LOOKBACK_BLOCKS = 50_000;
 const CHUNK_SIZE = 2_000; // stay under typical eth_getLogs range limits
+const MAX_WELCOMES_PER_RUN = 15; // cap on-chain sends per invocation so we never time out; remainder picked up next run
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -22,7 +23,7 @@ const REPUTATION_ABI = [
 ];
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000".slice(0, 66);
+const ZERO_HASH = ethers.ZeroHash; // correct 32-byte zero hash
 
 /* ---------- Helpers ---------- */
 
@@ -84,7 +85,8 @@ module.exports = async function handler(req, res) {
     );
 
     // 3. For each newly minted agent, welcome it (unless it's Beacon itself,
-    //    or already welcomed).
+    //    or already welcomed). Capped per run to stay within the time budget.
+    let sentThisRun = 0;
     for (const mint of mints) {
       const agentId = mint.args.tokenId;
       const owner = mint.args.to;
@@ -98,6 +100,10 @@ module.exports = async function handler(req, res) {
         log.push({ agentId: agentIdStr, status: "skipped", reason: "already welcomed" });
         continue;
       }
+      if (sentThisRun >= MAX_WELCOMES_PER_RUN) {
+        log.push({ agentId: agentIdStr, status: "deferred", reason: "per-run cap reached, will pick up next run" });
+        continue;
+      }
 
       try {
         const tx = await reputationWrite.giveFeedback(
@@ -108,6 +114,7 @@ module.exports = async function handler(req, res) {
           ZERO_HASH
         );
         await tx.wait();
+        sentThisRun++;
         log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
       } catch (err) {
         log.push({ agentId: agentIdStr, status: "error", reason: err.shortMessage || err.message });
