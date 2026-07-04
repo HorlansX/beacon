@@ -13,11 +13,12 @@ const LOOKBACK_BLOCKS = 50_000;
 const CHUNK_SIZE = 10_000; // Arc's own docs use a single 10,000-block eth_getLogs call safely — matching that here
 
 // Vercel Hobby caps function execution at 60s. Each welcome is a full signed
-// transaction (submit + wait for confirmation), so we only process a safe
-// batch per run and let the existing "already welcomed" check pick up any
-// backlog on the next run — this makes repeated/frequent runs safe and
-// self-resuming rather than needing a bigger timeout.
-const MAX_WELCOMES_PER_RUN = 8;
+// transaction (submit + wait for confirmation). The last real run confirmed
+// 8 welcomes + a full 50k-block scan finished comfortably inside 60s, so we
+// have headroom — raising to 15 to clear the backlog faster. If this starts
+// timing out, drop it back down; the "already welcomed" check makes this
+// safe to tune without losing any progress.
+const MAX_WELCOMES_PER_RUN = 15;
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
