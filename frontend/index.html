@@ -477,6 +477,16 @@
   </div>
 </section>
 
+<section class="network-stats" style="border-top: 1px solid rgba(237,239,234,0.08); padding-top: 40px;">
+  <div class="network-stats-inner">
+    <div class="network-stats-eyebrow"><span class="signal-dot"></span> Arc-wide, via ERC-8004</div>
+    <div class="stat-row">
+      <div class="stat"><span class="num" id="stat-identities">—</span><span class="label">Agent identities minted</span></div>
+    </div>
+    <p id="identities-sub" style="font-family: var(--font-mono); font-size: 12px; color: var(--sage); margin-top: 18px;">Every agent that has registered a real onchain identity on Arc's official ERC-8004 registry — not just those checked into Beacon.</p>
+  </div>
+</section>
+
 <footer>
   Contract address is set in <code>CONFIG.registryAddress</code> below. Deploy <code>AgentRegistry.sol</code> to Arc testnet and paste the address to go live.
 </footer>
@@ -740,10 +750,25 @@ function updateStats() {
   document.getElementById("stat-active").textContent = agents.filter(a => a.active).length;
 }
 
+/* ---------- Shared helper: chunked + parallel log queries ---------- */
+// Same pattern already proven reliable in the backend cron — keeps each
+// individual eth_getLogs call within a safe block range, and runs all
+// chunks concurrently rather than one at a time.
+async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
+  const ranges = [];
+  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
+    ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
+  }
+  const chunks = await Promise.all(
+    ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
+  );
+  return chunks.flat();
+}
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 /* ---------- Beacon's own welcome activity (real onchain feedback given) ---------- */
 // Counts NewFeedback events where Beacon's own wallet is the client — i.e.
 // agents Beacon has actually, autonomously welcomed via the daily cron.
-// Chunked + parallel, same pattern already proven reliable server-side.
 async function pollWelcomeActivity() {
   const subEl = document.getElementById("welcomed-sub");
   const statEl = document.getElementById("stat-welcomed");
@@ -756,16 +781,8 @@ async function pollWelcomeActivity() {
 
     const currentBlock = await readProvider.getBlockNumber();
     const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
-    const chunkSize = 10_000;
-
-    const ranges = [];
-    for (let start = fromBlock; start <= currentBlock; start += chunkSize) {
-      ranges.push([start, Math.min(start + chunkSize - 1, currentBlock)]);
-    }
-    const chunks = await Promise.all(
-      ranges.map(([start, end]) => reputation.queryFilter(filter, start, end))
-    );
-    const count = chunks.flat().length;
+    const events = await queryLogsChunked(reputation, filter, fromBlock, currentBlock, 10_000);
+    const count = events.length;
 
     statEl.textContent = count;
     subEl.innerHTML = count > 0
@@ -774,6 +791,29 @@ async function pollWelcomeActivity() {
   } catch (err) {
     statEl.textContent = "—";
     subEl.textContent = "Couldn't reach Arc testnet to check welcome activity right now.";
+  }
+}
+
+/* ---------- Arc-wide agent identity count (all of ERC-8004, not just Beacon) ---------- */
+// Counts every mint (Transfer from the zero address) on Arc's official
+// IdentityRegistry — i.e. every real agent identity that exists on Arc,
+// whether or not it's registered on Beacon or has ever received feedback.
+async function pollIdentityCount() {
+  const statEl = document.getElementById("stat-identities");
+  if (typeof ethers === "undefined") return;
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+    const filter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
+
+    const currentBlock = await readProvider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
+    const mints = await queryLogsChunked(identity, filter, fromBlock, currentBlock, 10_000);
+
+    statEl.textContent = mints.length.toLocaleString();
+  } catch (err) {
+    statEl.textContent = "—";
   }
 }
 
@@ -1180,11 +1220,13 @@ document.getElementById("retry-btn").addEventListener("click", () => loadAgents(
 if (document.readyState === "complete") {
   setTimeout(() => loadAgents(), 800);
   pollWelcomeActivity();
+  pollIdentityCount();
 } else {
-  window.addEventListener("load", () => { setTimeout(() => loadAgents(), 800); pollWelcomeActivity(); });
+  window.addEventListener("load", () => { setTimeout(() => loadAgents(), 800); pollWelcomeActivity(); pollIdentityCount(); });
 }
-// Heavier scan than the agent registry read, so it refreshes less often.
+// Heavier scans than the agent registry read, so they refresh less often.
 setInterval(pollWelcomeActivity, 90000);
+setInterval(pollIdentityCount, 90000);
 </script>
 </body>
 </html>
