@@ -1,14 +1,7 @@
-# Secrets — never commit these
+﻿node_modules/
+lib/
+out/
+cache/
+broadcast/
 .env
 .env.local
-.env.*.local
-
-# Dependencies
-node_modules/
-
-# Vercel
-.vercel/
-
-# OS/editor noise
-.DS_Store
-Thumbs.db
