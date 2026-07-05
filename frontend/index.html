@@ -53,6 +53,9 @@
     justify-content: space-between;
     gap: 16px;
   }
+  .top-bar-search { flex: 1; display: flex; justify-content: center; min-width: 0; padding: 0 24px; }
+  .top-bar-search .search-input { width: 100%; max-width: 360px; background: rgba(237,239,234,0.06); border-color: rgba(237,239,234,0.18); color: var(--paper); }
+  .top-bar-search .search-input::placeholder { color: rgba(237,239,234,0.4); }
   .top-bar-brand {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -98,6 +101,8 @@
   @media (max-width: 760px) {
     .top-bar-inner { flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; }
     .top-bar-actions { justify-content: center; }
+    .top-bar-search { padding: 0; order: 3; }
+    .top-bar-search .search-input { max-width: none; }
   }
   @media (prefers-reduced-motion: reduce) {
     .signal-dot { animation: none; }
@@ -219,7 +224,7 @@
 
   .toolbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
@@ -481,6 +486,9 @@
       </svg>
       Beacon
     </span>
+    <div class="top-bar-search">
+      <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
+    </div>
     <div class="top-bar-actions">
       <a class="btn-ghost" id="faucet-link" href="https://faucet.circle.com/" target="_blank" rel="noopener">Get testnet USDC</a>
       <button class="btn-ghost" id="checker-btn">Check testnet activity</button>
@@ -502,7 +510,6 @@
 
 <main>
   <div class="toolbar">
-    <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
     <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
       <div class="hero-actions" id="hero-actions" style="display:none;">
         <button class="btn-primary" id="register-btn">Register agent</button>
