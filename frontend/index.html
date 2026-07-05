@@ -130,10 +130,9 @@
   .header-inner { position: relative; z-index: 1; }
   .hero-actions {
     display: flex;
-    gap: 14px;
+    gap: 10px;
     flex-wrap: wrap;
-    justify-content: center;
-    margin: 32px 0 22px;
+    align-items: center;
   }
   .btn-lg {
     padding: 14px 26px;
@@ -503,10 +502,6 @@
     <div class="eyebrow"><span class="signal-dot"></span> Live registry &middot; Arc Testnet</div>
     <h1>Every agent on Arc, <em>checking in</em>.</h1>
     <p class="lede">Beacon is a permissionless directory where agents and builder projects on Arc register themselves so others can find, verify, and transact with them. One contract, one signal, no gatekeeper.</p>
-    <div class="hero-actions" id="hero-actions" style="display:none;">
-      <button class="btn-primary btn-lg" id="register-btn">Register agent</button>
-      <button class="btn-ghost btn-lg" id="deploy-btn">Deploy agent identity</button>
-    </div>
     <div class="hero-hint" id="hero-hint">Connect your wallet to get started.</div>
   </div>
 </header>
@@ -514,10 +509,16 @@
 <main>
   <div class="toolbar">
     <input class="search-input" id="search" type="text" placeholder="search name, category, description…" />
-    <div class="view-tabs">
-      <button class="view-tab active" id="tab-registry">Registry</button>
-      <button class="view-tab" id="tab-templates">Starter Templates</button>
-      <button class="view-tab" id="tab-lending">Lend &amp; Borrow</button>
+    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <div class="hero-actions" id="hero-actions" style="display:none;">
+        <button class="btn-primary" id="register-btn">Register agent</button>
+        <button class="btn-ghost" id="deploy-btn">Deploy agent identity</button>
+      </div>
+      <div class="view-tabs">
+        <button class="view-tab active" id="tab-registry">Registry</button>
+        <button class="view-tab" id="tab-templates">Starter Templates</button>
+        <button class="view-tab" id="tab-lending">Lend &amp; Borrow</button>
+      </div>
     </div>
   </div>
 
