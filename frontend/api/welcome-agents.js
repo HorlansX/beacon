@@ -19,7 +19,11 @@ const MAX_WELCOMES_PER_RUN = 60; // hard ceiling, in case sends are unusually fa
 // for the scan phase (before this loop even starts) and for writing the
 // final response. 100,000ms here would never fire, since the platform
 // would kill the function 40 seconds earlier regardless.
-const TIME_BUDGET_MS = 42_000;
+const TIME_BUDGET_MS = 48_000;
+// Sending is fast (each is just an RPC round-trip); confirming is what
+// takes real time. Stop sending new ones with enough runway left for all
+// the parallel confirmations to land before the 48s budget is up.
+const SEND_PHASE_BUDGET_MS = 28_000;
 
 const IDENTITY_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
@@ -99,7 +103,18 @@ module.exports = async function handler(req, res) {
 
     // 3. For each newly minted agent, welcome it (unless it's Beacon itself,
     //    or already welcomed). Capped per run to stay within the time budget.
-    let sentThisRun = 0;
+    //
+    // Speed matters here: Vercel Hobby hard-kills this function at 60s no
+    // matter what, so instead of sending one welcome and fully waiting for
+    // it to confirm before starting the next (each confirmation costs a
+    // few real seconds), we fire all sends first with manually-assigned
+    // sequential nonces, then wait for every confirmation in parallel at
+    // the end. Nonces must be assigned in order since Arc (like any EVM
+    // chain) requires each account's transactions to be mined in exact
+    // nonce sequence.
+    let nextNonce = await provider.getTransactionCount(beaconAddress, "pending");
+    const pending = []; // { agentIdStr, txPromise }
+
     for (const mint of mints) {
       const agentId = mint.args.tokenId;
       const owner = mint.args.to;
@@ -113,8 +128,8 @@ module.exports = async function handler(req, res) {
         log.push({ agentId: agentIdStr, status: "skipped", reason: "already welcomed" });
         continue;
       }
-      const outOfTime = (Date.now() - startTime) > TIME_BUDGET_MS;
-      if (sentThisRun >= MAX_WELCOMES_PER_RUN || outOfTime) {
+      const outOfTime = (Date.now() - startTime) > SEND_PHASE_BUDGET_MS;
+      if (pending.length >= MAX_WELCOMES_PER_RUN || outOfTime) {
         log.push({
           agentId: agentIdStr,
           status: "deferred",
@@ -124,24 +139,38 @@ module.exports = async function handler(req, res) {
       }
 
       try {
-        console.log(`[${elapsed()}] sending giveFeedback for agent ${agentIdStr}`);
+        const nonce = nextNonce++;
+        console.log(`[${elapsed()}] sending giveFeedback for agent ${agentIdStr} (nonce ${nonce})`);
         const tx = await reputationWrite.giveFeedback(
           agentId,
           95, 0,
           "welcome", "",
           "", "",
-          ZERO_HASH
+          ZERO_HASH,
+          { nonce }
         );
-        console.log(`[${elapsed()}] tx sent ${tx.hash}, waiting for confirmation`);
-        await tx.wait();
-        console.log(`[${elapsed()}] confirmed agent ${agentIdStr}`);
-        sentThisRun++;
-        log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
+        console.log(`[${elapsed()}] tx sent ${tx.hash} for agent ${agentIdStr}, not waiting yet`);
+        pending.push({ agentIdStr, tx });
       } catch (err) {
-        console.log(`[${elapsed()}] error on agent ${agentIdStr}: ${err.shortMessage || err.message}`);
+        console.log(`[${elapsed()}] send failed for agent ${agentIdStr}: ${err.shortMessage || err.message}`);
         log.push({ agentId: agentIdStr, status: "error", reason: err.shortMessage || err.message });
       }
     }
+
+    // Now confirm every sent transaction in parallel instead of one at a time.
+    console.log(`[${elapsed()}] all ${pending.length} sends fired, waiting for confirmations in parallel`);
+    const confirmations = await Promise.allSettled(pending.map((p) => p.tx.wait()));
+    let sentThisRun = 0;
+    confirmations.forEach((result, i) => {
+      const { agentIdStr, tx } = pending[i];
+      if (result.status === "fulfilled") {
+        sentThisRun++;
+        log.push({ agentId: agentIdStr, status: "welcomed", txHash: tx.hash });
+      } else {
+        console.log(`[${elapsed()}] confirmation failed for agent ${agentIdStr}: ${result.reason?.shortMessage || result.reason?.message}`);
+        log.push({ agentId: agentIdStr, status: "error", reason: result.reason?.shortMessage || result.reason?.message || "confirmation failed" });
+      }
+    });
 
     console.log(`[${elapsed()}] all done, welcomed ${sentThisRun} this run`);
     res.status(200).json({
