@@ -1198,10 +1198,37 @@ async function lookupAgent(rawInput) {
       const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
       const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, 10_000);
       if (mints.length === 0) {
-        statusEl.textContent = `This address does hold an agent identity (balance: ${balance.toString()}), but its mint happened before our ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()}-block scan window — try looking it up by agent ID directly if you know it.`;
-        return;
+        // Before giving up, try the ERC-721 Enumerable extension if this
+        // contract happens to support it — a few cheap direct calls instead
+        // of a much larger block scan. Gracefully falls through if not supported.
+        try {
+          const enumerableAbi = ["function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)"];
+          const enumerable = new ethers.Contract(ERC8004.identityRegistry, enumerableAbi, readProvider);
+          const capped = Math.min(Number(balance), 10);
+          const ids = await Promise.all(
+            Array.from({ length: capped }, (_, i) => enumerable.tokenOfOwnerByIndex(input, i))
+          );
+          if (ids.length === 1) {
+            agentId = ids[0];
+          } else {
+            statusEl.innerHTML = `This address holds ${balance.toString()} agent identities. Pick one: ` +
+              ids.map(id => `<a href="#" data-agentid="${id.toString()}" class="explorer-inline-link" style="text-decoration:underline; margin-right:10px;">AGENT-${id.toString()}</a>`).join("");
+            statusEl.querySelectorAll(".explorer-inline-link").forEach(link => {
+              link.addEventListener("click", (e) => {
+                e.preventDefault();
+                document.getElementById("explorer-input").value = link.dataset.agentid;
+                lookupAgent(link.dataset.agentid);
+              });
+            });
+            return;
+          }
+        } catch (enumErr) {
+          statusEl.textContent = `This address does hold an agent identity (balance: ${balance.toString()}), but its mint happened before our ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()}-block scan window, and this contract doesn't support direct enumeration either — try looking it up by agent ID directly if you know it.`;
+          return;
+        }
+      } else {
+        agentId = mints[mints.length - 1].args.tokenId;
       }
-      agentId = mints[mints.length - 1].args.tokenId;
     } else {
       statusEl.textContent = "That doesn't look like a valid agent ID or wallet address.";
       return;
