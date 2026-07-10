@@ -1182,13 +1182,23 @@ async function lookupAgent(rawInput) {
     if (/^\d+$/.test(input)) {
       agentId = BigInt(input);
     } else if (ethers.isAddress(input)) {
-      statusEl.textContent = "Searching mint history for this address…";
+      // Unbounded, definitive check first: does this address hold ANY
+      // identity right now? This isn't limited by a scan window, unlike
+      // the event search below, so a zero answer here is certain.
+      statusEl.textContent = "Checking this address on Arc's identity registry…";
+      const balance = await identity.balanceOf(input);
+      if (balance === 0n) {
+        statusEl.textContent = "This address has never held an ERC-8004 agent identity on Arc — confirmed directly from the registry, not just a recent-window scan.";
+        return;
+      }
+
+      statusEl.textContent = "Confirmed this address holds an identity — locating which agent ID…";
       const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, input, null);
       const currentBlock = await readProvider.getBlockNumber();
       const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
       const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, 10_000);
       if (mints.length === 0) {
-        statusEl.textContent = "No agent identity found for this address in the recent scan window. It may exist further back, or this address hasn't registered an ERC-8004 identity.";
+        statusEl.textContent = `This address does hold an agent identity (balance: ${balance.toString()}), but its mint happened before our ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()}-block scan window — try looking it up by agent ID directly if you know it.`;
         return;
       }
       agentId = mints[mints.length - 1].args.tokenId;
