@@ -468,15 +468,63 @@
     max-width: 1080px; margin: 0 auto; padding: 0 32px 64px;
     font-family: var(--font-mono); font-size: 11px; color: var(--sage);
   }
+  .trust-card {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+  }
+  .trust-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-top: 4px;
+  }
+  .trust-item { background: var(--paper); padding: 14px 16px; }
+  .trust-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--sage);
+    margin-bottom: 6px;
+  }
+  .trust-value { font-family: var(--font-mono); font-size: 13px; color: var(--ink); font-weight: 600; }
+  .trust-value.good { color: #3f7a4e; }
+  .trust-value.warn { color: var(--amber); }
+  .trust-value.neutral { color: var(--sage); font-weight: 400; }
+
+  .explorer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-bottom: none;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: background 0.12s ease;
+  }
+  .explorer-row:last-child { border-bottom: 1px solid var(--line); }
+  .explorer-row:hover { background: #F0F1EC; }
+  .explorer-row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .explorer-row-id { font-family: var(--font-mono); font-size: 11px; color: var(--sage); flex-shrink: 0; }
+  .explorer-row-owner { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .explorer-row-meta { font-family: var(--font-mono); font-size: 11px; color: var(--sage); flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
+  .rep-event {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .rep-event a { color: var(--ink); text-decoration: underline; }
 </style>
-<script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/insights/script.js"></script>
-<script>
-  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
-</script>
-<script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
 
@@ -527,6 +575,7 @@
         <button class="view-tab active" id="tab-registry">Registry</button>
         <button class="view-tab" id="tab-templates">Starter Templates</button>
         <button class="view-tab" id="tab-lending">Lend &amp; Borrow</button>
+        <button class="view-tab" id="tab-explorer">Explorer</button>
       </div>
     </div>
   </div>
@@ -578,6 +627,68 @@
         </div>
       </div>
       <div id="lending-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 14px; color: var(--sage);"></div>
+    </div>
+  </div>
+
+  <div id="explorer-panel" style="display:none;">
+    <p style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 20px; max-width: 60ch;">
+      Look up any agent on Arc's official ERC-8004 registry — by agent ID or wallet address — whether or not they've ever registered on Beacon. Reads Arc's chain directly.
+    </p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 24px;">
+      <input class="search-input" id="explorer-input" placeholder="agent ID (e.g. 42) or wallet address (0x…)" style="width: 340px;" />
+      <button class="btn-primary" id="explorer-search-btn">Look up</button>
+    </div>
+    <div id="explorer-status" style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 16px;"></div>
+    <div id="explorer-result" style="display:none;">
+      <div class="trust-card">
+        <div class="trust-card-header">
+          <div>
+            <div class="card-id" id="explorer-agent-id">—</div>
+            <div class="card-name" id="explorer-agent-owner">—</div>
+          </div>
+          <span id="explorer-beacon-badge"></span>
+        </div>
+        <p id="explorer-summary" style="font-size: 14px; line-height: 1.6; color: #3C4657; margin: 14px 0 20px;"></p>
+        <div class="trust-grid">
+          <div class="trust-item"><span class="trust-label">Identity</span><span class="trust-value" id="trust-identity">—</span></div>
+          <div class="trust-item"><span class="trust-label">Reputation</span><span class="trust-value" id="trust-reputation">—</span></div>
+          <div class="trust-item"><span class="trust-label">Validation</span><span class="trust-value" id="trust-validation">—</span></div>
+          <div class="trust-item"><span class="trust-label">Risk signal</span><span class="trust-value" id="trust-risk">—</span></div>
+          <div class="trust-item"><span class="trust-label">Last activity</span><span class="trust-value" id="trust-activity">—</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="detail-row" style="border-bottom:1px dashed var(--line); padding-bottom:8px; margin-bottom:8px;"><span class="detail-label">Metadata URI</span><span class="detail-value" id="explorer-metadata-uri">—</span></div>
+        <div class="detail-row"><span class="detail-label">Registration</span><span class="detail-value" id="explorer-registration-link">—</span></div>
+      </div>
+
+      <h3 style="font-family: var(--font-display); font-weight: 500; font-size: 18px; margin: 28px 0 12px;">Reputation events</h3>
+      <div id="explorer-reputation-list" style="font-family: var(--font-mono); font-size: 12.5px;"></div>
+    </div>
+
+    <div style="margin-top: 48px; border-top: 1px solid var(--line); padding-top: 28px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <h3 style="font-family: var(--font-display); font-weight: 500; font-size: 18px; margin: 0;">Recently minted on Arc</h3>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <select class="sort-select" id="explorer-scope-filter">
+            <option value="all">All Arc agents</option>
+            <option value="beacon">Registered on Beacon only</option>
+          </select>
+          <select class="sort-select" id="explorer-category-filter" style="display:none;">
+            <option value="all">All categories</option>
+            <option value="trading">Trading</option>
+            <option value="payments">Payments</option>
+            <option value="infra">Infra / tooling</option>
+            <option value="defi">DeFi</option>
+            <option value="fx">FX / stablecoin</option>
+            <option value="nft">NFT</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div id="explorer-browse-status" style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 12px;"></div>
+      <div id="explorer-browse-list"></div>
     </div>
   </div>
 </main>
@@ -742,11 +853,21 @@ const ERC8004 = {
 // Standard ERC-721 interface + confirmed register() signature from Arc's own docs.
 const IDENTITY_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
+  "function ownerOf(uint256 tokenId) view returns (address)",
+  "function tokenURI(uint256 tokenId) view returns (string)",
   "function register(string metadataURI) returns ()",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)"
 ];
 const REPUTATION_ABI = [
   "event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
+];
+// Confirmed against ERC-8004's published spec (matches Arc's own docs
+// wording for the validationRequest/validationResponse functions) — the
+// indexed-parameter order matters for the event's identifying hash, so
+// this is copied exactly, not guessed.
+const VALIDATION_ABI = [
+  "event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId, string requestURI, bytes32 indexed requestHash)",
+  "event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId, bytes32 indexed requestHash, uint8 response, string responseURI, bytes32 responseHash, string tag)"
 ];
 // Beacon's own dedicated wallet — the one the daily cron uses to autonomously
 // welcome new agents on Arc's official ERC-8004 reputation registry. This is
@@ -829,10 +950,12 @@ function switchTab(tab) {
   document.getElementById("tab-registry").classList.toggle("active", tab === "registry");
   document.getElementById("tab-templates").classList.toggle("active", tab === "templates");
   document.getElementById("tab-lending").classList.toggle("active", tab === "lending");
+  document.getElementById("tab-explorer").classList.toggle("active", tab === "explorer");
 
   document.getElementById("grid").style.display = tab === "registry" ? "grid" : "none";
   document.getElementById("templates-grid").style.display = tab === "templates" ? "grid" : "none";
   document.getElementById("lending-panel").style.display = tab === "lending" ? "block" : "none";
+  document.getElementById("explorer-panel").style.display = tab === "explorer" ? "block" : "none";
 
   // Registry-only states shouldn't show while browsing other tabs.
   if (tab === "registry") {
@@ -844,6 +967,7 @@ function switchTab(tab) {
   }
 
   if (tab === "lending") loadLendingPanel();
+  if (tab === "explorer" && explorerBrowseCache.length === 0) loadExplorerBrowseList();
 }
 
 /* ---------- Rendering ---------- */
@@ -1028,6 +1152,255 @@ async function pollIdentityCount() {
   } catch (err) {
     statEl.textContent = "—";
   }
+}
+
+/* ---------- Explorer: look up ANY agent on Arc, not just Beacon's own registry ---------- */
+
+// Converts ipfs:// URIs to a fetchable gateway URL; leaves http(s) untouched.
+function toFetchableUri(uri) {
+  if (!uri) return null;
+  if (uri.startsWith("ipfs://")) return "https://ipfs.io/ipfs/" + uri.slice(7);
+  if (uri.startsWith("http")) return uri;
+  return null; // data: URIs and anything else: don't attempt a network fetch
+}
+
+async function lookupAgent(rawInput) {
+  const statusEl = document.getElementById("explorer-status");
+  const resultEl = document.getElementById("explorer-result");
+  resultEl.style.display = "none";
+  statusEl.textContent = "";
+
+  const input = (rawInput || "").trim();
+  if (!input) { statusEl.textContent = "Enter an agent ID or wallet address."; return; }
+  if (typeof ethers === "undefined") { statusEl.textContent = "Still loading — try again in a moment."; return; }
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+
+    let agentId;
+    if (/^\d+$/.test(input)) {
+      agentId = BigInt(input);
+    } else if (ethers.isAddress(input)) {
+      statusEl.textContent = "Searching mint history for this address…";
+      const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, input, null);
+      const currentBlock = await readProvider.getBlockNumber();
+      const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
+      const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, 10_000);
+      if (mints.length === 0) {
+        statusEl.textContent = "No agent identity found for this address in the recent scan window. It may exist further back, or this address hasn't registered an ERC-8004 identity.";
+        return;
+      }
+      agentId = mints[mints.length - 1].args.tokenId;
+    } else {
+      statusEl.textContent = "That doesn't look like a valid agent ID or wallet address.";
+      return;
+    }
+
+    statusEl.textContent = `Reading agent #${agentId.toString()} from Arc…`;
+
+    let owner, tokenURI;
+    try {
+      [owner, tokenURI] = await Promise.all([
+        identity.ownerOf(agentId),
+        identity.tokenURI(agentId)
+      ]);
+    } catch (err) {
+      statusEl.textContent = `No agent found with ID ${agentId.toString()}.`;
+      return;
+    }
+
+    statusEl.textContent = "Reading reputation history…";
+    const reputation = new ethers.Contract(ERC8004.reputationRegistry, REPUTATION_ABI, readProvider);
+    const repFilter = reputation.filters.NewFeedback(agentId, null);
+    const currentBlock2 = await readProvider.getBlockNumber();
+    const fromBlock2 = Math.max(0, currentBlock2 - WELCOME_LOOKBACK_BLOCKS);
+    const repEvents = await queryLogsChunked(reputation, repFilter, fromBlock2, currentBlock2, 10_000);
+
+    // Best-effort metadata fetch — many registration files will fail here due
+    // to CORS or simply not existing, and that's fine: it degrades gracefully
+    // rather than blocking the rest of the lookup.
+    let metadata = null;
+    const fetchUrl = toFetchableUri(tokenURI);
+    if (fetchUrl) {
+      try {
+        const resp = await fetch(fetchUrl, { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) metadata = await resp.json();
+      } catch (err) { /* silent — metadata is optional context, not required */ }
+    }
+
+    const beaconEntry = agents.find(a => a.owner.toLowerCase() === owner.toLowerCase());
+
+    await renderExplorerResult({ agentId, owner, tokenURI, metadata, repEvents, beaconEntry });
+    statusEl.textContent = "";
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Couldn't complete the lookup — Arc testnet may be slow to respond right now, try again.";
+  }
+}
+
+async function renderExplorerResult({ agentId, owner, tokenURI, metadata, repEvents, beaconEntry }) {
+  const resultEl = document.getElementById("explorer-result");
+  resultEl.style.display = "block";
+
+  document.getElementById("explorer-agent-id").textContent = `AGENT-${agentId.toString()}`;
+  document.getElementById("explorer-agent-owner").textContent = metadata?.name || shortAddr(owner);
+
+  document.getElementById("explorer-beacon-badge").innerHTML = beaconEntry
+    ? `<span class="badge-chip" title="Also registered on Beacon">🔗 On Beacon</span>`
+    : "";
+
+  const fetchableUri = toFetchableUri(tokenURI);
+  document.getElementById("explorer-metadata-uri").innerHTML = fetchableUri
+    ? `<a href="${fetchableUri}" target="_blank" rel="noopener" style="text-decoration:underline;">${escapeHtml(tokenURI.length > 60 ? tokenURI.slice(0,60)+"…" : tokenURI)}</a>`
+    : escapeHtml(tokenURI || "—");
+  document.getElementById("explorer-registration-link").innerHTML =
+    `<a href="${CONFIG.blockExplorerUrl}/token/${ERC8004.identityRegistry}?a=${agentId.toString()}" target="_blank" rel="noopener" style="text-decoration:underline;">view on Arcscan →</a>`;
+
+  const hasReputation = repEvents.length > 0;
+  const lastEvent = hasReputation ? repEvents[repEvents.length - 1] : null;
+
+  const idEl = document.getElementById("trust-identity");
+  idEl.textContent = "Registered";
+  idEl.className = "trust-value good";
+
+  const repEl = document.getElementById("trust-reputation");
+  repEl.textContent = hasReputation ? `${repEvents.length} feedback event${repEvents.length === 1 ? "" : "s"}` : "No feedback yet";
+  repEl.className = hasReputation ? "trust-value good" : "trust-value neutral";
+
+  // Honest limitation: ValidationRegistry lookups are keyed by a request
+  // hash we don't have on hand for an arbitrary agent, so we don't fake a
+  // status here rather than guess at an unverified call.
+  const valEl = document.getElementById("trust-validation");
+  valEl.textContent = "Not available in this view";
+  valEl.className = "trust-value neutral";
+
+  const riskEl = document.getElementById("trust-risk");
+  riskEl.textContent = hasReputation ? "Has track record" : "No track record yet";
+  riskEl.className = hasReputation ? "trust-value good" : "trust-value warn";
+
+  const activityEl = document.getElementById("trust-activity");
+  if (lastEvent) {
+    activityEl.textContent = "checking…";
+    try {
+      const block = await lastEvent.getBlock();
+      activityEl.textContent = timeAgo(block.timestamp);
+      activityEl.className = "trust-value good";
+    } catch (err) {
+      activityEl.textContent = "unknown";
+      activityEl.className = "trust-value neutral";
+    }
+  } else {
+    activityEl.textContent = "No recorded activity";
+    activityEl.className = "trust-value neutral";
+  }
+
+  // Summary — a plain-language sentence assembled only from facts we just
+  // verified onchain (or from the agent's own registration file, clearly
+  // attributed). Not an inferred or generated claim.
+  let summary = `Agent #${agentId.toString()} is owned by ${shortAddr(owner)}.`;
+  if (metadata?.description) {
+    const desc = metadata.description.length > 140 ? metadata.description.slice(0, 140) + "…" : metadata.description;
+    summary += ` Its registration file describes it as: "${desc}"`;
+  }
+  summary += hasReputation
+    ? ` It has received ${repEvents.length} onchain reputation signal${repEvents.length === 1 ? "" : "s"} so far.`
+    : ` It hasn't received any onchain reputation feedback yet.`;
+  if (beaconEntry) {
+    summary += ` It's also listed on Beacon as "${beaconEntry.name}", categorized under ${beaconEntry.category || "other"}.`;
+  }
+  document.getElementById("explorer-summary").textContent = summary;
+
+  const listEl = document.getElementById("explorer-reputation-list");
+  if (!hasReputation) {
+    listEl.innerHTML = `<p style="color: var(--sage);">No reputation events recorded for this agent yet.</p>`;
+  } else {
+    listEl.innerHTML = repEvents.slice().reverse().slice(0, 25).map(e => {
+      const tag = e.args.tag1 || "feedback";
+      const value = e.args.value?.toString?.() ?? "";
+      return `<div class="detail-row"><span class="detail-label">${escapeHtml(tag)} · score ${escapeHtml(value)}</span><span class="detail-value"><a href="${CONFIG.blockExplorerUrl}/tx/${e.transactionHash}" target="_blank" rel="noopener" style="text-decoration:underline;">view tx →</a></span></div>`;
+    }).join("");
+  }
+}
+
+/* ---------- Explorer: browse recently minted agents (discovery, not just direct search) ---------- */
+let explorerBrowseCache = [];
+
+async function loadExplorerBrowseList() {
+  const statusEl = document.getElementById("explorer-browse-status");
+  const listEl = document.getElementById("explorer-browse-list");
+  if (typeof ethers === "undefined") return;
+
+  statusEl.textContent = "Scanning Arc for recently minted agents…";
+  listEl.innerHTML = "";
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+    const filter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
+
+    const currentBlock = await readProvider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
+    const mints = await queryLogsChunked(identity, filter, fromBlock, currentBlock, 10_000);
+
+    explorerBrowseCache = mints
+      .slice()
+      .reverse()
+      .slice(0, 60)
+      .map(e => ({ agentId: e.args.tokenId, owner: e.args.to }));
+
+    statusEl.textContent = `Showing the ${explorerBrowseCache.length} most recent, out of the last ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()} blocks scanned.`;
+    applyExplorerBrowseFilter();
+  } catch (err) {
+    statusEl.textContent = "Couldn't load the recent agents list right now.";
+  }
+}
+
+function applyExplorerBrowseFilter() {
+  const scope = document.getElementById("explorer-scope-filter").value;
+  const category = document.getElementById("explorer-category-filter").value;
+  const listEl = document.getElementById("explorer-browse-list");
+
+  document.getElementById("explorer-category-filter").style.display = scope === "beacon" ? "inline-block" : "none";
+
+  let rows = explorerBrowseCache.map(row => {
+    const beaconEntry = agents.find(a => a.owner.toLowerCase() === row.owner.toLowerCase());
+    return { ...row, beaconEntry };
+  });
+
+  if (scope === "beacon") {
+    rows = rows.filter(r => r.beaconEntry);
+    if (category !== "all") {
+      rows = rows.filter(r => (r.beaconEntry.category || "other") === category);
+    }
+  }
+
+  if (rows.length === 0) {
+    listEl.innerHTML = `<p style="color: var(--sage); font-family: var(--font-mono); font-size: 12.5px;">No agents match this filter yet.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = rows.map(r => `
+    <div class="explorer-row" data-agent-id="${r.agentId.toString()}">
+      <div class="explorer-row-left">
+        <span class="explorer-row-id">AGENT-${r.agentId.toString()}</span>
+        <span class="explorer-row-owner">${shortAddr(r.owner)}</span>
+      </div>
+      <div class="explorer-row-meta">
+        ${r.beaconEntry ? `<span class="badge-chip">🔗 ${escapeHtml(r.beaconEntry.name)}</span>` : ""}
+        <span>view →</span>
+      </div>
+    </div>
+  `).join("");
+
+  listEl.querySelectorAll(".explorer-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const id = row.dataset.agentId;
+      document.getElementById("explorer-input").value = id;
+      lookupAgent(id);
+      window.scrollTo({ top: document.getElementById("explorer-panel").offsetTop - 100, behavior: "smooth" });
+    });
+  });
 }
 
 /* ---------- Contract reads ---------- */
@@ -1597,6 +1970,16 @@ document.getElementById("retry-btn").addEventListener("click", () => loadAgents(
 document.getElementById("tab-registry").addEventListener("click", () => switchTab("registry"));
 document.getElementById("tab-templates").addEventListener("click", () => switchTab("templates"));
 document.getElementById("tab-lending").addEventListener("click", () => switchTab("lending"));
+document.getElementById("tab-explorer").addEventListener("click", () => switchTab("explorer"));
+
+document.getElementById("explorer-search-btn").addEventListener("click", () => {
+  lookupAgent(document.getElementById("explorer-input").value);
+});
+document.getElementById("explorer-input").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") lookupAgent(document.getElementById("explorer-input").value);
+});
+document.getElementById("explorer-scope-filter").addEventListener("change", applyExplorerBrowseFilter);
+document.getElementById("explorer-category-filter").addEventListener("change", applyExplorerBrowseFilter);
 document.getElementById("faucet-usdc-btn").addEventListener("click", handleFaucetUsdc);
 document.getElementById("deposit-btn").addEventListener("click", handleDeposit);
 document.getElementById("borrow-btn").addEventListener("click", handleBorrow);
