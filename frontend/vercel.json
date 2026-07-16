@@ -9,6 +9,9 @@
   "functions": {
     "api/welcome-agents.js": {
       "maxDuration": 280
+    },
+    "api/agent/[id].js": {
+      "maxDuration": 30
     }
   }
 }
