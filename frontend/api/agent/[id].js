@@ -98,10 +98,12 @@ module.exports = async function handler(req, res) {
 
     let owner, tokenURI;
     try {
-      [owner, tokenURI] = await Promise.all([
-        identity.ownerOf(agentId),
-        identity.tokenURI(agentId)
-      ]);
+      // Sequential rather than Promise.all — firing both eth_call requests
+      // at once risks the same RPC-batching issue ("could not coalesce
+      // error") we saw earlier in the cron job. One at a time is slightly
+      // slower but far more reliable against Arc's public RPC.
+      owner = await identity.ownerOf(agentId);
+      tokenURI = await identity.tokenURI(agentId);
     } catch (err) {
       // Surface the real error rather than masking every failure as
       // "not found" — a genuinely missing token reverts differently than
@@ -201,6 +203,10 @@ module.exports = async function handler(req, res) {
       scannedBlocks: [fromBlock2, currentBlock2]
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.shortMessage || err.message || "Something went wrong reading Arc testnet." });
+    res.status(500).json({
+      ok: false,
+      error: "Something went wrong reading Arc testnet.",
+      debug: err.shortMessage || err.reason || err.message || String(err)
+    });
   }
 };
