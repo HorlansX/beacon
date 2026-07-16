@@ -103,7 +103,14 @@ module.exports = async function handler(req, res) {
         identity.tokenURI(agentId)
       ]);
     } catch (err) {
-      res.status(404).json({ ok: false, error: `No agent found with ID ${agentId.toString()}.` });
+      // Surface the real error rather than masking every failure as
+      // "not found" — a genuinely missing token reverts differently than
+      // an RPC hiccup or a bad call, and callers deserve to know which.
+      res.status(404).json({
+        ok: false,
+        error: `Could not read agent ${agentId.toString()} from the identity registry.`,
+        debug: err.shortMessage || err.reason || err.message || String(err)
+      });
       return;
     }
 
