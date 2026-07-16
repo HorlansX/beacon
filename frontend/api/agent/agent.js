@@ -96,24 +96,29 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    let owner, tokenURI;
+    // ownerOf is required — if this fails, the agent genuinely doesn't exist.
+    let owner;
     try {
-      // Sequential rather than Promise.all — firing both eth_call requests
-      // at once risks the same RPC-batching issue ("could not coalesce
-      // error") we saw earlier in the cron job. One at a time is slightly
-      // slower but far more reliable against Arc's public RPC.
       owner = await identity.ownerOf(agentId);
-      tokenURI = await identity.tokenURI(agentId);
     } catch (err) {
-      // Surface the real error rather than masking every failure as
-      // "not found" — a genuinely missing token reverts differently than
-      // an RPC hiccup or a bad call, and callers deserve to know which.
       res.status(404).json({
         ok: false,
-        error: `Could not read agent ${agentId.toString()} from the identity registry.`,
+        error: `No agent found with ID ${agentId.toString()}.`,
         debug: err.shortMessage || err.reason || err.message || String(err)
       });
       return;
+    }
+
+    // tokenURI is metadata only — if this specific call fails (some agents
+    // register without setting one, or the call reverts for other reasons),
+    // that shouldn't sink an otherwise-successful lookup. We already have
+    // the important part (owner) confirmed above.
+    let tokenURI = null;
+    let tokenUriError = null;
+    try {
+      tokenURI = await identity.tokenURI(agentId);
+    } catch (err) {
+      tokenUriError = err.shortMessage || err.reason || err.message || String(err);
     }
 
     const reputation = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
@@ -185,6 +190,7 @@ module.exports = async function handler(req, res) {
       agentId: agentId.toString(),
       owner,
       tokenURI,
+      tokenUriError,
       metadata,
       registeredOnBeacon: beaconEntry,
       reputation: {
