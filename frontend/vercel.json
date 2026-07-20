@@ -11,7 +11,7 @@
       "maxDuration": 280
     },
     "api/agent/[id].js": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   }
 }

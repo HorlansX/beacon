@@ -9,7 +9,13 @@ const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
 
 // Same bounded-but-generous scan window used elsewhere in Beacon, kept
 // consistent so results here match what the Explorer tab shows.
-const LOOKBACK_BLOCKS = 500_000;
+// Reduced from 500k now that batching is disabled — every chunk is now a
+// separate, real HTTP request instead of a bundled one, so a smaller
+// window keeps this well within the function's time limit. Still covers
+// a meaningful, recent window; a direct agent-ID lookup by number doesn't
+// depend on this at all (it's only used for address-based lookups and the
+// reputation history scan).
+const LOOKBACK_BLOCKS = 100_000;
 const CHUNK_SIZE = 10_000;
 
 const IDENTITY_ABI = [
