@@ -70,7 +70,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    // Arc's public RPC doesn't handle ethers' automatic request batching
+    // cleanly (manifests as "could not coalesce error"), and that batching
+    // happens on an internal timer — not just when calls are literally
+    // simultaneous — so sequential awaits alone don't prevent it. Disabling
+    // batching outright (batchMaxCount: 1) is the actual fix.
+    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
