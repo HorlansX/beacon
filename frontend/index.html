@@ -1318,7 +1318,7 @@ async function connectWallet() {
     return;
   }
   try {
-    provider = new ethers.BrowserProvider(window.ethereum, ARC_NETWORK);
+    provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = await provider.getSigner();
 
