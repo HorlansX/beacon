@@ -1,29 +1,10 @@
 const { ethers } = require("ethers");
 
-/* ---------- Config ---------- */
-const RPC_URLS = [
-  "https://rpc.testnet.arc.network",
-  "https://rpc.testnet.arc.io",
-  "https://rpc.blockdaemon.testnet.arc.io",
-  "https://rpc.drpc.testnet.arc.io",
-  "https://5042002.rpc.thirdweb.com"
-];
-
-async function getWorkingProvider() {
-  for (const url of RPC_URLS) {
-    try {
-      const provider = new ethers.JsonRpcProvider(url, undefined, { batchMaxCount: 1 });
-      await provider.getBlockNumber();
-      return provider;
-    } catch (e) { console.warn("RPC failed:", url); }
-  }
-  throw new Error("All RPC endpoints failed");
-}
+const RPC_URL = "https://5042002.rpc.thirdweb.com";
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BEACON_REGISTRY = "0x3dEE45B67b8A3163fdBa98eE742931aAd6594477";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
-
 const LOOKBACK_BLOCKS = 100_000;
 const CHUNK_SIZE = 10_000;
 
@@ -45,7 +26,6 @@ const BEACON_REGISTRY_ABI = [
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-/* ---------- Helpers ---------- */
 async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
@@ -72,7 +52,6 @@ function timeAgo(unixSeconds) {
   return Math.floor(diff / 86400) + "d ago";
 }
 
-/* ---------- CORS ---------- */
 function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -90,12 +69,12 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL, ARC_NETWORK, { batchMaxCount: 1, staticNetwork: ARC_NETWORK });
+    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
-    let lookupMethod = "id"; // "id" or "address"
-
+    let lookupMethod = "id";
+    
     if (/^\d+$/.test(rawInput)) {
       agentId = BigInt(rawInput);
       lookupMethod = "id";
@@ -117,7 +96,7 @@ module.exports = async function handler(req, res) {
       if (mints.length === 0) {
         res.status(404).json({ 
           ok: false, 
-          error: `This address holds ${balance.toString()} identity(ies), but the mint is outside our ~${LOOKBACK_BLOCKS.toLocaleString()}-block scan window.`,
+          error: This address holds  identity(ies), but the mint is outside our ~-block scan window.,
           address: rawInput,
           balance: balance.toString()
         });
@@ -129,20 +108,18 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // ownerOf is required
     let owner;
     try {
       owner = await identity.ownerOf(agentId);
     } catch (err) {
       res.status(404).json({
         ok: false,
-        error: `No agent found with ID ${agentId.toString()}.`,
+        error: No agent found with ID .,
         debug: err.shortMessage || err.reason || err.message || String(err)
       });
       return;
     }
 
-    // tokenURI is optional
     let tokenURI = null;
     let tokenUriError = null;
     try {
@@ -151,14 +128,12 @@ module.exports = async function handler(req, res) {
       tokenUriError = err.shortMessage || err.reason || err.message || String(err);
     }
 
-    // Reputation scan
     const reputation = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
     const currentBlock2 = await provider.getBlockNumber();
     const fromBlock2 = Math.max(0, currentBlock2 - LOOKBACK_BLOCKS);
     const repFilter = reputation.filters.NewFeedback(agentId, null);
     const repEvents = await queryLogsChunked(reputation, repFilter, fromBlock2, currentBlock2, CHUNK_SIZE);
 
-    // Metadata fetch
     let metadata = null;
     const fetchUrl = toFetchableUri(tokenURI);
     if (fetchUrl) {
@@ -168,7 +143,6 @@ module.exports = async function handler(req, res) {
       } catch (err) {}
     }
 
-    // Beacon cross-reference
     let beaconEntry = null;
     try {
       const beaconRegistry = new ethers.Contract(BEACON_REGISTRY, BEACON_REGISTRY_ABI, provider);
@@ -189,7 +163,6 @@ module.exports = async function handler(req, res) {
       }
     } catch (err) {}
 
-    // Activity tracking
     const hasReputation = repEvents.length > 0;
     let lastActivity = null;
     if (hasReputation) {
@@ -199,15 +172,13 @@ module.exports = async function handler(req, res) {
       } catch (err) {}
     }
 
-    // Build reputation events list
     const reputationEvents = repEvents.slice().reverse().slice(0, 25).map(e => ({
       tag: e.args.tag1 || "feedback",
       score: e.args.value?.toString?.() ?? null,
       txHash: e.transactionHash,
-      explorerUrl: `${BLOCK_EXPLORER_URL}/tx/${e.transactionHash}`
+      explorerUrl: ${BLOCK_EXPLORER_URL}/tx/
     }));
 
-    // Calculate aggregate reputation score
     let aggregateScore = null;
     if (hasReputation) {
       const scores = repEvents.map(e => {
@@ -226,17 +197,16 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Build summary
-    let summary = `Agent #${agentId.toString()} is owned by ${owner}.`;
+    let summary = Agent # is owned by .;
     if (metadata?.description) {
-      const desc = metadata.description.length > 140 ? metadata.description.slice(0, 140) + "â€¦" : metadata.description;
-      summary += ` Its registration file describes it as: "${desc}"`;
+      const desc = metadata.description.length > 140 ? metadata.description.slice(0, 140) + "…" : metadata.description;
+      summary +=  Its registration file describes it as: "";
     }
     summary += hasReputation
-      ? ` It has received ${repEvents.length} onchain reputation signal${repEvents.length === 1 ? "" : "s"} so far.`
-      : ` It hasn't received any onchain reputation feedback yet.`;
+      ?  It has received  onchain reputation signal so far.
+      :  It hasn't received any onchain reputation feedback yet.;
     if (beaconEntry) {
-      summary += ` It's also listed on Beacon as "${beaconEntry.name}", categorized under ${beaconEntry.category || "other"}.`;
+      summary +=  It's also listed on Beacon as "", categorized under .;
     }
 
     res.status(200).json({
@@ -254,13 +224,13 @@ module.exports = async function handler(req, res) {
       },
       trustCard: {
         identity: "registered",
-        reputation: hasReputation ? `${repEvents.length} feedback event(s)` : "no feedback yet",
+        reputation: hasReputation ? ${repEvents.length} feedback event(s) : "no feedback yet",
         validation: "not available in this view",
         riskSignal: hasReputation ? "has track record" : "no track record yet",
         lastActivity
       },
       summary,
-      explorerUrl: `${BLOCK_EXPLORER_URL}/token/${IDENTITY_REGISTRY}?a=${agentId.toString()}`,
+      explorerUrl: ${BLOCK_EXPLORER_URL}/token/?a=,
       scannedBlocks: [fromBlock2, currentBlock2],
       lookupMethod
     });
