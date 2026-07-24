@@ -2,13 +2,21 @@ const { ethers } = require("ethers");
 const { createThirdwebClient, defineChain } = require("thirdweb");
 const { facilitator, settlePayment } = require("thirdweb/x402");
 
-const RPC_URL = "https://5042002.rpc.thirdweb.com";
+/* ---------- Config ---------- */
+// Reverted to Arc's own public RPC — the exact endpoint already proven
+// reliable (with batchMaxCount: 1) in the free lookup endpoint. Thirdweb's
+// RPC Edge is available too, but needs a client ID appended
+// (https://<chain>.rpc.thirdweb.com/<clientId>) when used outside their
+// SDK, and swapping in an unverified endpoint isn't worth the risk here.
+const RPC_URL = "https://rpc.testnet.arc.network";
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
 const LOOKBACK_BLOCKS = 2_000_000;
 const CHUNK_SIZE = 10_000;
-const PRICE_USD = ".02";
+// thirdweb's price parser expects a $-prefixed string, e.g. "$0.02" — not
+// ".02", which would fail to parse correctly.
+const PRICE_USD = "$0.02";
 const SERVER_WALLET_ADDRESS = "0x6E1633ED0539eC24622e9714e27446190578927A";
 
 const arcTestnet = defineChain({
@@ -28,6 +36,7 @@ const REPUTATION_ABI = [
   "event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
 ];
 
+/* ---------- Helpers ---------- */
 async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
@@ -68,11 +77,12 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  // ---------- Payment gate ----------
   try {
     const client = createThirdwebClient({ secretKey });
     const twFacilitator = facilitator({ client, serverWalletAddress: SERVER_WALLET_ADDRESS });
     const paymentData = req.headers["x-payment"] || req.headers["payment-signature"];
-    const resourceUrl = https://beacon-arc.vercel.app/api/agent//full;
+    const resourceUrl = `https://beacon-arc.vercel.app/api/agent/${rawInput}/full`;
 
     const result = await settlePayment({
       resourceUrl,
@@ -96,6 +106,7 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  // ---------- Payment confirmed — do the actual (paid) work ----------
   try {
     const agentId = BigInt(rawInput);
     const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
@@ -105,14 +116,14 @@ module.exports = async function handler(req, res) {
     try {
       owner = await identity.ownerOf(agentId);
     } catch (err) {
-      res.status(404).json({ ok: false, error: No agent found with ID . });
+      res.status(404).json({ ok: false, error: `No agent found with ID ${agentId.toString()}.` });
       return;
     }
 
     let tokenURI = null;
     try {
       tokenURI = await identity.tokenURI(agentId);
-    } catch (err) {}
+    } catch (err) { /* metadata optional */ }
 
     const reputation = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
     const currentBlock = await provider.getBlockNumber();
@@ -126,16 +137,18 @@ module.exports = async function handler(req, res) {
       try {
         const resp = await fetch(fetchUrl, { signal: AbortSignal.timeout(5000) });
         if (resp.ok) metadata = await resp.json();
-      } catch (err) {}
+      } catch (err) { /* best-effort */ }
     }
 
+    // Aggregate scoring and per-tag breakdown — genuinely useful additions
+    // for the paid tier, kept from the previous version of this file.
     let aggregateScore = null;
     let tagBreakdown = {};
     if (repEvents.length > 0) {
       const scores = [];
       for (const e of repEvents) {
         const val = e.args.value;
-        if (val) {
+        if (val !== undefined && val !== null) {
           const num = Number(val);
           scores.push(num);
           const tag = e.args.tag1 || "feedback";
@@ -160,7 +173,7 @@ module.exports = async function handler(req, res) {
       tag: e.args.tag1 || "feedback",
       score: e.args.value?.toString?.() ?? null,
       txHash: e.transactionHash,
-      explorerUrl: ${BLOCK_EXPLORER_URL}/tx/
+      explorerUrl: `${BLOCK_EXPLORER_URL}/tx/${e.transactionHash}`
     }));
 
     res.status(200).json({
@@ -176,7 +189,7 @@ module.exports = async function handler(req, res) {
         events: fullHistory
       },
       scannedBlocks: [fromBlock, currentBlock],
-      note: Full history within the last ~ blocks (paid tier).
+      note: `Full history within the last ~${LOOKBACK_BLOCKS.toLocaleString()} blocks (paid tier).`
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: "Something went wrong reading Arc testnet.", debug: err.shortMessage || err.message || String(err) });
