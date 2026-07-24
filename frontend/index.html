@@ -996,7 +996,8 @@ const CONFIG = {
   registryAddress: "0x3dEE45B67b8A3163fdBa98eE742931aAd6594477",
   chainIdHex: "0x4CEF52", // 5042002
   rpcUrls: [
-    "https://rpc.testnet.arc.io",           // Official Circle primary
+    "https://rpc.testnet.arc.network",      // MetaMask default / Arc official
+    "https://rpc.testnet.arc.io",           // Arc docs primary
     "https://rpc.blockdaemon.testnet.arc.io", // Blockdaemon fallback
     "https://rpc.drpc.testnet.arc.io",      // dRPC fallback
     "https://5042002.rpc.thirdweb.com"      // Thirdweb fallback
@@ -1273,15 +1274,7 @@ async function loadAgents(attempt = 1) {
   }
 
   try {
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) { console.warn("RPC failed:", rpcUrl, e.message); }
-    }
-    if (!readProvider) throw new Error("All RPC endpoints failed");
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const readContract = new ethers.Contract(CONFIG.registryAddress, ABI, readProvider);
     const total = Number(await readContract.totalAgents());
     const raw = total > 0 ? await readContract.getAgents(0, Math.min(total, 100)) : [];
@@ -1338,7 +1331,7 @@ async function connectWallet() {
           params: [{
             chainId: CONFIG.chainIdHex,
             chainName: CONFIG.chainName,
-            rpcUrls: [CONFIG.rpcUrls[0]],
+            rpcUrls: [CONFIG.rpcUrl],
             nativeCurrency: CONFIG.nativeCurrency,
             blockExplorerUrls: [CONFIG.blockExplorerUrl]
           }]
@@ -1433,15 +1426,7 @@ async function openDetail(agent) {
   document.getElementById("detail-backdrop").classList.add("open");
 
   try {
-    let readProvider = null;
-  for (const rpcUrl of CONFIG.rpcUrls) {
-    try {
-      readProvider = new ethers.JsonRpcProvider(rpcUrl);
-      await readProvider.getBlockNumber();
-      break;
-    } catch (e) {}
-  }
-  if (!readProvider) return;
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
     const bal = await identityContract.balanceOf(agent.owner);
     if (Number(bal) > 0) {
@@ -1455,18 +1440,6 @@ async function openDetail(agent) {
 }
 
 /* ---------- Activity Checker (FIXED) ---------- */
-async function tryRpcUrl(rpcUrl, addrInput) {
-  const readProvider = new ethers.JsonRpcProvider(rpcUrl);
-  await readProvider.getBlockNumber();
-  const [txCount, balanceWei] = await Promise.all([
-    readProvider.getTransactionCount(addrInput),
-    readProvider.getBalance(addrInput)
-  ]);
-  const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
-  const identityBalance = await identityContract.balanceOf(addrInput);
-  return { txCount, balanceWei, identityBalance, rpcUrl };
-}
-
 async function runActivityCheck() {
   const addrInput = document.getElementById("checker-address").value.trim();
   const status = document.getElementById("checker-status");
@@ -1492,48 +1465,63 @@ async function runActivityCheck() {
 
   status.innerHTML = '<span class="loading-spinner"></span>Checking Arc testnet…';
 
-  // Try each RPC endpoint
-  let lastErr = null;
-  for (let i = 0; i < CONFIG.rpcUrls.length; i++) {
-    const rpcUrl = CONFIG.rpcUrls[i];
-    try {
-      status.innerHTML = `<span class="loading-spinner"></span>Trying RPC ${i + 1}/${CONFIG.rpcUrls.length}…`;
-      const data = await tryRpcUrl(rpcUrl, addrInput);
+  try {
+    console.log("[Beacon] Creating provider for:", CONFIG.rpcUrl);
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
 
-      document.getElementById("checker-txcount").textContent = data.txCount;
-      document.getElementById("checker-balance").textContent = ethers.formatEther(data.balanceWei) + " USDC";
-      document.getElementById("checker-identity").textContent = data.identityBalance.toString();
+    console.log("[Beacon] Testing connection with getBlockNumber…");
+    const blockNum = await readProvider.getBlockNumber();
+    console.log("[Beacon] Connected! Current block:", blockNum);
 
-      const badges = [];
-      if (data.txCount > 0) badges.push("🟢 Active on Arc");
-      if (data.txCount >= 20) badges.push("⚡ Power User");
-      if (Number(data.identityBalance) > 0) badges.push("🪪 Registered Identity (ERC-8004)");
-      renderBadgeRow(document.getElementById("checker-badges"), badges, "identity");
+    console.log("[Beacon] Fetching transaction count for:", addrInput);
+    const txCount = await readProvider.getTransactionCount(addrInput);
+    console.log("[Beacon] TX count:", txCount);
 
-      status.className = "status-text success";
-      status.textContent = `Check complete via ${new URL(rpcUrl).hostname}.`;
-      result.style.display = "block";
-      return;
-    } catch (err) {
-      lastErr = err;
-      console.warn(`RPC ${rpcUrl} failed:`, err.message);
+    console.log("[Beacon] Fetching balance…");
+    const balanceWei = await readProvider.getBalance(addrInput);
+    console.log("[Beacon] Balance:", balanceWei.toString());
+
+    console.log("[Beacon] Fetching identity balance…");
+    const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+    const identityBalance = await identityContract.balanceOf(addrInput);
+    console.log("[Beacon] Identity balance:", identityBalance.toString());
+
+    document.getElementById("checker-txcount").textContent = txCount;
+    document.getElementById("checker-balance").textContent = ethers.formatEther(balanceWei) + " USDC";
+    document.getElementById("checker-identity").textContent = identityBalance.toString();
+
+    const badges = [];
+    if (txCount > 0) badges.push("🟢 Active on Arc");
+    if (txCount >= 20) badges.push("⚡ Power User");
+    if (Number(identityBalance) > 0) badges.push("🪪 Registered Identity (ERC-8004)");
+    renderBadgeRow(document.getElementById("checker-badges"), badges, "identity");
+
+    status.className = "status-text success";
+    status.textContent = "Check complete — data from Arc testnet.";
+    result.style.display = "block";
+
+  } catch (err) {
+    console.error("[Beacon] Activity check failed:", err);
+    console.error("[Beacon] Error name:", err.name);
+    console.error("[Beacon] Error message:", err.message);
+    console.error("[Beacon] Error code:", err.code);
+
+    status.className = "status-text error";
+
+    let errorMsg = "Couldn't reach Arc testnet — the RPC may be temporarily unavailable.";
+
+    if (err.code === "UNKNOWN_ERROR" || err.message?.includes("could not coalesce")) {
+      errorMsg = "Arc's RPC returned an error. This is a known issue — try again in a few minutes.";
+    } else if (err.code === "TIMEOUT" || err.message?.includes("timeout")) {
+      errorMsg = "Connection timed out — Arc testnet may be slow right now.";
+    } else if (err.code === "NETWORK_ERROR" || err.message?.includes("network")) {
+      errorMsg = "Network error — check your internet connection.";
+    } else if (err.message?.includes("CORS") || err.message?.includes("Failed to fetch")) {
+      errorMsg = "Browser blocked the connection (CORS). Arc's testnet RPC may not allow browser requests.";
     }
+
+    status.innerHTML = errorMsg + '<br><span style="font-size:11px; color:var(--sage);">Error: ' + escapeHtml(err.message || err.code || "unknown") + '</span><br><button class="btn-ghost" style="margin-top:8px;" onclick="runActivityCheck()">Try again</button>';
   }
-
-  // All RPCs failed
-  console.error("All RPC endpoints failed:", lastErr);
-  status.className = "status-text error";
-
-  let errorMsg = "Couldn't reach Arc testnet — all RPC endpoints are temporarily unavailable.";
-  if (lastErr?.message?.includes("CORS") || lastErr?.message?.includes("Failed to fetch")) {
-    errorMsg = "Browser blocked all connections (CORS). This is a known issue with Arc's testnet RPC from browsers.";
-  } else if (lastErr?.message?.includes("network")) {
-    errorMsg = "Network error — check your internet connection.";
-  } else if (lastErr?.message?.includes("timeout")) {
-    errorMsg = "All connections timed out — Arc testnet may be experiencing issues.";
-  }
-
-  status.innerHTML = errorMsg + '<br><button class="btn-ghost" style="margin-top:8px;" onclick="runActivityCheck()">Try again</button>';
 }
 
 function openChecker() {
@@ -1674,15 +1662,7 @@ async function pollWelcomeActivity() {
   if (typeof ethers === "undefined") return;
 
   try {
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) {}
-    }
-    if (!readProvider) throw new Error("All RPC endpoints failed");
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const reputation = new ethers.Contract(ERC8004.reputationRegistry, REPUTATION_ABI, readProvider);
     const filter = reputation.filters.NewFeedback(null, BEACON_WALLET_ADDRESS);
 
@@ -1757,19 +1737,7 @@ async function lookupAgent(rawInput) {
   statusEl.innerHTML = '<span class="loading-spinner"></span>Connecting to Arc…';
 
   try {
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) {}
-    }
-    if (!readProvider) {
-      statusEl.textContent = "Couldn't connect to any Arc testnet RPC endpoint.";
-      statusEl.className = "status-text error";
-      return;
-    }
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
 
     let agentId;
@@ -1957,19 +1925,7 @@ async function loadExplorerBrowseList() {
   listEl.innerHTML = "";
 
   try {
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) {}
-    }
-    if (!readProvider) {
-      statusEl.textContent = "Couldn't connect to any Arc testnet RPC endpoint.";
-      statusEl.className = "status-text error";
-      return;
-    }
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
     const filter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
 
@@ -2047,19 +2003,7 @@ function fromUnits(bn) {
 
 async function loadLendingPanel() {
   try {
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) {}
-    }
-    if (!readProvider) {
-      console.warn("Couldn't load pool stats — all RPCs failed");
-      document.getElementById("lending-pool-stats").style.display = "none";
-      return;
-    }
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const lendingRead = new ethers.Contract(LENDING.lendingAddress, LENDING_ABI, readProvider);
     const [liquidity, factor] = await Promise.all([
       lendingRead.poolLiquidity(),
@@ -2087,15 +2031,7 @@ async function refreshLendingPosition() {
   if (!signer) return;
   try {
     const addr = await signer.getAddress();
-    let readProvider = null;
-    for (const rpcUrl of CONFIG.rpcUrls) {
-      try {
-        readProvider = new ethers.JsonRpcProvider(rpcUrl);
-        await readProvider.getBlockNumber();
-        break;
-      } catch (e) {}
-    }
-    if (!readProvider) return;
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const lendingRead = new ethers.Contract(LENDING.lendingAddress, LENDING_ABI, readProvider);
     const [collateral, loan, maxBorrow, available] = await Promise.all([
       lendingRead.collateralBalances(addr),

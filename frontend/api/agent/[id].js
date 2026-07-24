@@ -2,6 +2,7 @@ const { ethers } = require("ethers");
 
 /* ---------- Config ---------- */
 const RPC_URLS = [
+  "https://rpc.testnet.arc.network",
   "https://rpc.testnet.arc.io",
   "https://rpc.blockdaemon.testnet.arc.io",
   "https://rpc.drpc.testnet.arc.io",
@@ -89,7 +90,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const provider = await getWorkingProvider();
+    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
