@@ -3,7 +3,23 @@ const { createThirdwebClient, defineChain } = require("thirdweb");
 const { facilitator, settlePayment } = require("thirdweb/x402");
 
 /* ---------- Config ---------- */
-const RPC_URL = "https://rpc.testnet.arc.network";
+const RPC_URLS = [
+  "https://rpc.testnet.arc.io",
+  "https://rpc.blockdaemon.testnet.arc.io",
+  "https://rpc.drpc.testnet.arc.io",
+  "https://5042002.rpc.thirdweb.com"
+];
+
+async function getWorkingProvider() {
+  for (const url of RPC_URLS) {
+    try {
+      const provider = new ethers.JsonRpcProvider(url, undefined, { batchMaxCount: 1 });
+      await provider.getBlockNumber();
+      return provider;
+    } catch (e) { console.warn("RPC failed:", url); }
+  }
+  throw new Error("All RPC endpoints failed");
+}
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
@@ -105,7 +121,7 @@ module.exports = async function handler(req, res) {
   // ---------- Payment confirmed — do the actual (paid) work ----------
   try {
     const agentId = BigInt(rawInput);
-    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
+    const provider = await getWorkingProvider();
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let owner;
