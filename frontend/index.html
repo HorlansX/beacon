@@ -22,24 +22,25 @@
     --font-mono: 'IBM Plex Mono', monospace;
   }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--paper);
     color: var(--ink);
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
   }
   a { color: inherit; }
 
-  /* Fixed top wallet bar */
-  body { padding-top: 52px; }
+  /* ===== FIXED TOP BAR ===== */
   .top-bar {
     position: fixed;
     top: 0; left: 0; right: 0;
-    height: 52px;
+    min-height: 52px;
     background: var(--ink);
     color: var(--paper);
-    z-index: 50;
+    z-index: 100;
     display: flex;
     align-items: center;
     border-bottom: 1px solid rgba(237,239,234,0.12);
@@ -47,15 +48,33 @@
   .top-bar-inner {
     width: 100%;
     margin: 0;
-    padding: 0 24px;
+    padding: 10px 24px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+    flex-wrap: wrap;
   }
-  .top-bar-search { flex: 1; display: flex; justify-content: center; min-width: 0; padding: 0 24px; }
-  .top-bar-search .search-input { width: 100%; max-width: 360px; background: rgba(237,239,234,0.06); border-color: rgba(237,239,234,0.18); color: var(--paper); }
+  .top-bar-search { 
+    flex: 1; 
+    display: flex; 
+    justify-content: center; 
+    min-width: 0; 
+    padding: 0 24px; 
+  }
+  .top-bar-search .search-input { 
+    width: 100%; 
+    max-width: 360px; 
+    background: rgba(237,239,234,0.06); 
+    border-color: rgba(237,239,234,0.18); 
+    color: var(--paper); 
+  }
   .top-bar-search .search-input::placeholder { color: rgba(237,239,234,0.4); }
+  .top-bar-search .search-input:focus { 
+    outline: 2px solid var(--amber); 
+    outline-offset: 1px; 
+    background: rgba(237,239,234,0.1);
+  }
   .top-bar-brand {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -65,15 +84,25 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .top-bar-wallet { display: flex; align-items: center; gap: 12px; }
-  .top-bar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .top-bar-actions { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    flex-wrap: wrap; 
+    justify-content: flex-end; 
+    flex-shrink: 0;
+  }
   .top-bar-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
   #faucet-link { text-decoration: none; display: inline-flex; align-items: center; }
   #wallet-status {
     font-family: var(--font-mono);
     font-size: 12px;
     color: rgba(237,239,234,0.65);
+    white-space: nowrap;
   }
   .top-bar .btn-ghost {
     background: transparent;
@@ -81,8 +110,9 @@
     border: 1px solid rgba(237,239,234,0.35);
     padding: 7px 16px;
     font-size: 13px;
+    white-space: nowrap;
   }
-  .top-bar .btn-ghost:hover { border-color: var(--paper); }
+  .top-bar .btn-ghost:hover { border-color: var(--paper); background: rgba(237,239,234,0.08); }
 
   /* Signal dot */
   .signal-dot {
@@ -98,17 +128,11 @@
     70%  { box-shadow: 0 0 0 8px rgba(198,138,46,0); }
     100% { box-shadow: 0 0 0 0 rgba(198,138,46,0); }
   }
-  @media (max-width: 760px) {
-    .top-bar-inner { flex-direction: column; align-items: stretch; padding: 16px; gap: 12px; }
-    .top-bar-actions { justify-content: center; }
-    .top-bar-search { padding: 0; order: 3; }
-    .top-bar-search .search-input { max-width: none; }
-  }
   @media (prefers-reduced-motion: reduce) {
     .signal-dot { animation: none; }
   }
 
-  /* Header */
+  /* ===== HEADER ===== */
   header {
     position: relative;
     background:
@@ -117,7 +141,7 @@
       radial-gradient(1100px 700px at 10% 100%, rgba(10,50,60,0.4), transparent 55%),
       linear-gradient(160deg, #0A2028 0%, #0B1F1A 55%, #08130F 100%);
     color: var(--paper);
-    padding: 96px 32px 72px;
+    padding: 120px 32px 80px;
     overflow: hidden;
     text-align: center;
   }
@@ -132,23 +156,7 @@
     mask-image: radial-gradient(ellipse 900px 500px at 70% 0%, black, transparent 70%);
     pointer-events: none;
   }
-  .header-inner { position: relative; z-index: 1; }
-  .hero-actions {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .btn-lg {
-    padding: 14px 26px;
-    font-size: 14px;
-  }
-  .hero-actions .btn-primary { background: var(--amber); color: var(--panel-dark); }
-  .hero-actions .btn-primary:hover { background: #d89a3a; }
-  .header-inner {
-    max-width: 720px;
-    margin: 0 auto;
-  }
+  .header-inner { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; }
   .eyebrow {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -164,7 +172,7 @@
   h1 {
     font-family: var(--font-display);
     font-weight: 500;
-    font-size: clamp(40px, 6vw, 68px);
+    font-size: clamp(36px, 6vw, 68px);
     line-height: 1.06;
     margin: 0 auto 22px;
     max-width: 14ch;
@@ -177,17 +185,6 @@
     max-width: 48ch;
     margin: 0 auto 8px;
   }
-  .stat-row {
-    display: flex;
-    gap: 40px;
-    flex-wrap: wrap;
-    border-top: 1px solid rgba(237,239,234,0.15);
-    padding-top: 24px;
-  }
-  .stat { font-family: var(--font-mono); }
-  .stat .num { font-size: 26px; color: var(--paper); display: block; }
-  .stat .label { font-size: 11px; color: var(--sage); text-transform: uppercase; letter-spacing: 0.08em; }
-
   .hero-hint {
     font-size: 13px;
     color: rgba(237,239,234,0.6);
@@ -195,31 +192,19 @@
     min-height: 18px;
     text-align: center;
   }
-  .btn-disabled { opacity: 0.5; }
-
-  /* Network stats band — pulled out of the hero, shown further down the page */
-  .network-stats {
-    background: var(--panel-dark);
-    color: var(--paper);
-    padding: 56px 32px;
-    border-top: 1px solid rgba(237,239,234,0.08);
-  }
-  .network-stats-inner { max-width: 1080px; margin: 0 auto; }
-  .network-stats-eyebrow {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--amber);
-    margin-bottom: 24px;
+  .hero-actions {
     display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
   }
-  .network-stats .stat-row { border-top: none; padding-top: 0; gap: 64px; }
-  .network-stats .stat .num { font-size: 42px; }
+  .btn-lg { padding: 14px 26px; font-size: 14px; }
+  .hero-actions .btn-primary { background: var(--amber); color: var(--panel-dark); }
+  .hero-actions .btn-primary:hover { background: #d89a3a; }
+  .btn-disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* Main */
+  /* ===== MAIN CONTENT ===== */
   main { max-width: 1080px; margin: 0 auto; padding: 48px 32px 56px; }
 
   .toolbar {
@@ -231,7 +216,14 @@
     margin-bottom: 32px;
   }
 
-  .view-tabs { display: flex; gap: 4px; background: var(--card-bg); border: 1px solid var(--line); border-radius: 4px; padding: 3px; }
+  .view-tabs { 
+    display: flex; 
+    gap: 4px; 
+    background: var(--card-bg); 
+    border: 1px solid var(--line); 
+    border-radius: 4px; 
+    padding: 3px; 
+  }
   .view-tab {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -241,51 +233,28 @@
     background: transparent;
     color: var(--sage);
     cursor: pointer;
+    transition: all 0.15s ease;
   }
+  .view-tab:hover { color: var(--ink); }
   .view-tab.active { background: var(--ink); color: var(--paper); }
 
-  .template-card { border-left: 3px solid var(--amber); }
-  .template-tag {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--amber);
-    margin-bottom: 4px;
-    display: block;
+  /* ===== BUTTONS ===== */
+  button, .btn {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 3px;
+    padding: 11px 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
-  .template-prereq {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--sage);
-    margin-top: 4px;
-  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #263457; }
+  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn-ghost:hover { border-color: var(--ink); }
 
-  .lending-pool-stats {
-    display: flex;
-    gap: 40px;
-    align-items: baseline;
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    padding: 24px;
-    border-radius: 4px;
-  }
-  .lending-position-row {
-    background: var(--card-bg);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 4px 20px;
-    margin-top: 20px;
-  }
-  .lending-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px;
-    margin-top: 20px;
-  }
-  .lending-action { display: flex; gap: 8px; }
-  .lending-action input { flex-shrink: 0; }
-  .lending-action button { flex-grow: 1; }
+  /* ===== SEARCH INPUT ===== */
   .search-input {
     font-family: var(--font-mono);
     font-size: 13px;
@@ -295,42 +264,11 @@
     border-radius: 3px;
     width: 260px;
     color: var(--ink);
+    transition: all 0.15s ease;
   }
   .search-input:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
 
-  button, .btn {
-    font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 14px;
-    border: none;
-    border-radius: 3px;
-    padding: 11px 20px;
-    cursor: pointer;
-  }
-  .btn-primary { background: var(--ink); color: var(--paper); }
-  .btn-primary:hover { background: #263457; }
-  .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
-  .btn-ghost:hover { border-color: var(--ink); }
-
-  #wallet-status {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--sage);
-    align-self: center;
-  }
-
-  /* Celebration modal */
-  .celebrate-seal {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: rgba(198,138,46,0.12);
-    border: 2px solid var(--amber);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px;
-    margin-bottom: 18px;
-  }
-
-  /* Ledger grid */
+  /* ===== GRID & CARDS ===== */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -344,7 +282,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    transition: background 0.15s ease;
   }
+  .card:hover { background: #F1F3EC; }
   .card-top {
     display: flex;
     justify-content: space-between;
@@ -391,8 +331,8 @@
     color: var(--ink);
   }
   .card-link { font-size: 12px; text-decoration: underline; color: var(--ink); }
+  .card-link:hover { color: var(--amber); }
   .card { cursor: pointer; }
-  .card:hover { background: #F1F3EC; }
 
   .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .badge-chip {
@@ -407,13 +347,7 @@
   }
   .badge-chip.identity { background: rgba(22,33,59,0.08); color: var(--ink); border-color: var(--line); }
 
-  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }
-  .detail-row:last-child { border-bottom: none; }
-  .detail-label { font-family: var(--font-mono); font-size: 11px; color: var(--sage); text-transform: uppercase; }
-  .detail-value { text-align: right; max-width: 60%; word-break: break-word; }
-  .checker-result { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); display: none; }
-  .checker-stat { display: flex; justify-content: space-between; padding: 8px 0; font-family: var(--font-mono); font-size: 13px; }
-
+  /* ===== EMPTY & LOADING STATES ===== */
   .empty-state {
     padding: 64px 24px;
     text-align: center;
@@ -421,22 +355,51 @@
     font-family: var(--font-mono);
     font-size: 13px;
   }
+  .loading-spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid var(--line);
+    border-top-color: var(--amber);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-banner {
+    padding: 16px 24px;
+    text-align: center;
+    color: var(--amber);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    background: rgba(198,138,46,0.08);
+    border: 1px solid rgba(198,138,46,0.2);
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
 
-  /* Modal */
+  /* ===== MODALS ===== */
   .modal-backdrop {
     display: none;
-    position: fixed; inset: 0;
-    background: rgba(14,18,16,0.55);
-    align-items: center; justify-content: center;
+    position: fixed; 
+    inset: 0;
+    background: rgba(14,18,16,0.65);
+    align-items: center; 
+    justify-content: center;
     padding: 24px;
-    z-index: 60;
+    z-index: 200;
+    backdrop-filter: blur(4px);
   }
   .modal-backdrop.open { display: flex; }
   .modal {
     background: var(--paper);
-    width: 100%; max-width: 480px;
+    width: 100%; 
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
     border-radius: 4px;
     padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   }
   .modal h2 { font-family: var(--font-display); font-weight: 500; margin: 0 0 6px; font-size: 24px; }
   .modal p.sub { color: var(--sage); font-size: 13px; margin: 0 0 24px; }
@@ -459,22 +422,78 @@
     border-radius: 3px;
     background: #fff;
     color: var(--ink);
+    transition: border-color 0.15s ease;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    outline: none;
+    border-color: var(--amber);
   }
   .field textarea { resize: vertical; min-height: 70px; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
-  #form-status { font-family: var(--font-mono); font-size: 12px; margin-top: 12px; color: var(--sage); }
-
-  footer {
-    max-width: 1080px; margin: 0 auto; padding: 0 32px 64px;
-    font-family: var(--font-mono); font-size: 11px; color: var(--sage);
+  #form-status, .status-text { 
+    font-family: var(--font-mono); 
+    font-size: 12px; 
+    margin-top: 12px; 
+    color: var(--sage); 
   }
+  .status-text.error { color: #c0392b; }
+  .status-text.success { color: #3f7a4e; }
+
+  /* ===== CELEBRATION MODAL ===== */
+  .celebrate-seal {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(198,138,46,0.12);
+    border: 2px solid var(--amber);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    margin-bottom: 18px;
+  }
+
+  /* ===== DETAIL ROWS ===== */
+  .detail-row { 
+    display: flex; 
+    justify-content: space-between; 
+    padding: 10px 0; 
+    border-bottom: 1px dashed var(--line); 
+    font-size: 13px; 
+    gap: 16px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { 
+    font-family: var(--font-mono); 
+    font-size: 11px; 
+    color: var(--sage); 
+    text-transform: uppercase; 
+    flex-shrink: 0;
+  }
+  .detail-value { 
+    text-align: right; 
+    max-width: 60%; 
+    word-break: break-word; 
+  }
+  .checker-result { 
+    margin-top: 20px; 
+    padding-top: 16px; 
+    border-top: 1px solid var(--line); 
+    display: none; 
+  }
+  .checker-stat { 
+    display: flex; 
+    justify-content: space-between; 
+    padding: 8px 0; 
+    font-family: var(--font-mono); 
+    font-size: 13px; 
+  }
+
+  /* ===== TRUST CARD ===== */
   .trust-card {
     background: var(--card-bg);
     border: 1px solid var(--line);
     border-radius: 4px;
     padding: 24px;
   }
-  .trust-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+  .trust-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .trust-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -498,6 +517,7 @@
   .trust-value.warn { color: var(--amber); }
   .trust-value.neutral { color: var(--sage); font-weight: 400; }
 
+  /* ===== EXPLORER ===== */
   .explorer-row {
     display: flex;
     justify-content: space-between;
@@ -524,10 +544,133 @@
     border-bottom: 1px dashed var(--line);
   }
   .rep-event a { color: var(--ink); text-decoration: underline; }
+  .rep-event a:hover { color: var(--amber); }
+
+  .sort-select {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--card-bg);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  /* ===== NETWORK STATS ===== */
+  .network-stats {
+    background: var(--panel-dark);
+    color: var(--paper);
+    padding: 56px 32px;
+    border-top: 1px solid rgba(237,239,234,0.08);
+  }
+  .network-stats-inner { max-width: 1080px; margin: 0 auto; }
+  .network-stats-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .network-stats .stat-row { display: flex; gap: 64px; flex-wrap: wrap; }
+  .network-stats .stat { font-family: var(--font-mono); }
+  .network-stats .stat .num { font-size: 42px; color: var(--paper); display: block; }
+  .network-stats .stat .label { font-size: 11px; color: var(--sage); text-transform: uppercase; letter-spacing: 0.08em; }
+
+  /* ===== LENDING PANEL ===== */
+  .lending-pool-stats {
+    display: flex;
+    gap: 40px;
+    align-items: baseline;
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    padding: 24px;
+    border-radius: 4px;
+    flex-wrap: wrap;
+  }
+  .lending-position-row {
+    background: var(--card-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 4px 20px;
+    margin-top: 20px;
+  }
+  .lending-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .lending-action { display: flex; gap: 8px; }
+  .lending-action input { flex-shrink: 0; }
+  .lending-action button { flex-grow: 1; }
+
+  /* ===== TEMPLATES ===== */
+  .template-card { border-left: 3px solid var(--amber); }
+  .template-tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    margin-bottom: 4px;
+    display: block;
+  }
+  .template-prereq {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--sage);
+    margin-top: 4px;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    max-width: 1080px; margin: 0 auto; padding: 0 32px 64px;
+    font-family: var(--font-mono); font-size: 11px; color: var(--sage);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 760px) {
+    .top-bar-inner { 
+      flex-direction: column; 
+      align-items: stretch; 
+      padding: 12px 16px; 
+      gap: 10px; 
+    }
+    .top-bar-actions { justify-content: center; }
+    .top-bar-search { padding: 0; order: 3; width: 100%; }
+    .top-bar-search .search-input { max-width: none; width: 100%; }
+
+    header { padding: 100px 20px 60px; }
+    main { padding: 32px 16px 40px; }
+    .network-stats { padding: 40px 16px; }
+    .network-stats .stat-row { gap: 32px; }
+    .network-stats .stat .num { font-size: 32px; }
+
+    .modal { padding: 24px; max-height: 85vh; }
+    .lending-actions { grid-template-columns: 1fr; }
+    .lending-action { flex-direction: column; }
+    .lending-action input { width: 100% !important; }
+
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 32px; }
+    .hero-actions { flex-direction: column; width: 100%; }
+    .hero-actions button { width: 100%; }
+    .view-tabs { flex-wrap: wrap; }
+    .view-tab { padding: 6px 10px; font-size: 11px; }
+  }
 </style>
 </head>
 <body>
 
+<!-- ===== TOP BAR ===== -->
 <div class="top-bar">
   <div class="top-bar-inner">
     <span class="top-bar-brand">
@@ -555,47 +698,54 @@
   </div>
 </div>
 
+<!-- ===== HEADER ===== -->
 <header>
   <div class="header-inner">
     <div class="eyebrow"><span class="signal-dot"></span> Live registry &middot; Arc Testnet</div>
     <h1>Every agent on Arc, <em>checking in</em>.</h1>
     <p class="lede">Beacon is a permissionless directory where agents and builder projects on Arc register themselves so others can find, verify, and transact with them. One contract, one signal, no gatekeeper.</p>
     <div class="hero-hint" id="hero-hint">Connect your wallet to get started.</div>
+    <div class="hero-actions" id="hero-actions" style="display:none; margin-top: 20px;">
+      <button class="btn-primary btn-lg" id="register-btn">Register agent</button>
+      <button class="btn-ghost btn-lg" id="deploy-btn">Deploy agent identity</button>
+    </div>
   </div>
 </header>
 
+<!-- ===== MAIN ===== -->
 <main>
   <div class="toolbar">
-    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-      <div class="hero-actions" id="hero-actions" style="display:none;">
-        <button class="btn-primary" id="register-btn">Register agent</button>
-        <button class="btn-ghost" id="deploy-btn">Deploy agent identity</button>
-      </div>
-      <div class="view-tabs">
-        <button class="view-tab active" id="tab-registry">Registry</button>
-        <button class="view-tab" id="tab-templates">Starter Templates</button>
-        <button class="view-tab" id="tab-lending">Lend &amp; Borrow</button>
-        <button class="view-tab" id="tab-explorer">Explorer</button>
-      </div>
+    <div class="view-tabs">
+      <button class="view-tab active" id="tab-registry">Registry</button>
+      <button class="view-tab" id="tab-templates">Starter Templates</button>
+      <button class="view-tab" id="tab-lending">Lend &amp; Borrow</button>
+      <button class="view-tab" id="tab-explorer">Explorer</button>
     </div>
   </div>
 
+  <!-- Registry Grid -->
   <div class="grid" id="grid"></div>
   <div class="empty-state" id="empty-state" style="display:none;">No entries yet. Be the first signal on the beacon.</div>
-  <div class="empty-state" id="loading-state">Connecting to Arc testnet…</div>
-  <div class="empty-state" id="demo-banner" style="display:none; color: var(--amber);">
+  <div class="empty-state" id="loading-state">
+    <span class="loading-spinner"></span>Connecting to Arc testnet…
+  </div>
+  <div class="error-banner" id="demo-banner" style="display:none;">
     ⚠ Couldn't reach Arc testnet — showing demo data below, not your real registry.
-    <br/><button class="btn-ghost" id="retry-btn" style="margin-top: 10px;">Retry</button>
+    <br/><button class="btn-ghost" id="retry-btn" style="margin-top: 10px;">Retry connection</button>
   </div>
 
+  <!-- Templates Grid -->
   <div class="grid" id="templates-grid" style="display:none;"></div>
 
+  <!-- Lending Panel -->
   <div id="lending-panel" style="display:none;">
-    <div class="lending-pool-stats" style="display:none;">
+    <div class="lending-pool-stats" id="lending-pool-stats" style="display:none;">
       <div class="stat"><span class="num" id="lending-liquidity">—</span><span class="label">Pool liquidity (Mock USDC)</span></div>
       <div class="stat"><span class="num" id="lending-factor">—</span><span class="label">Collateral factor</span></div>
     </div>
-    <div id="lending-connect-prompt" style="display:none;" class="empty-state">Connect your wallet above to use the lending pool.</div>
+    <div id="lending-connect-prompt" style="display:none;" class="empty-state">
+      <span class="loading-spinner"></span>Connect your wallet above to use the lending pool.
+    </div>
 
     <div id="lending-position" style="display:none;">
       <div class="lending-position-row">
@@ -626,19 +776,20 @@
           <button class="btn-primary" id="withdraw-btn">Withdraw collateral</button>
         </div>
       </div>
-      <div id="lending-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 14px; color: var(--sage);"></div>
+      <div id="lending-status" class="status-text"></div>
     </div>
   </div>
 
+  <!-- Explorer Panel -->
   <div id="explorer-panel" style="display:none;">
     <p style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 20px; max-width: 60ch;">
       Look up any agent on Arc's official ERC-8004 registry — by agent ID or wallet address — whether or not they've ever registered on Beacon. Reads Arc's chain directly.
     </p>
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom: 24px;">
-      <input class="search-input" id="explorer-input" placeholder="agent ID (e.g. 42) or wallet address (0x…)" style="width: 340px;" />
+      <input class="search-input" id="explorer-input" placeholder="agent ID (e.g. 42) or wallet address (0x…)" style="width: 340px; max-width: 100%;" />
       <button class="btn-primary" id="explorer-search-btn">Look up</button>
     </div>
-    <div id="explorer-status" style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 16px;"></div>
+    <div id="explorer-status" class="status-text" style="margin-bottom: 16px;"></div>
     <div id="explorer-result" style="display:none;">
       <div class="trust-card">
         <div class="trust-card-header">
@@ -687,12 +838,13 @@
           </select>
         </div>
       </div>
-      <div id="explorer-browse-status" style="font-family: var(--font-mono); font-size: 12.5px; color: var(--sage); margin-bottom: 12px;"></div>
+      <div id="explorer-browse-status" class="status-text" style="margin-bottom: 12px;"></div>
       <div id="explorer-browse-list"></div>
     </div>
   </div>
 </main>
 
+<!-- ===== NETWORK STATS ===== -->
 <section class="network-stats">
   <div class="network-stats-inner">
     <div class="network-stats-eyebrow"><span class="signal-dot"></span> Beacon network activity</div>
@@ -715,6 +867,14 @@
   </div>
 </section>
 
+<!-- ===== FOOTER ===== -->
+<footer>
+  <p>Beacon — Agent Registry for Arc Testnet. Built permissionless.</p>
+</footer>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Register Modal -->
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal">
     <h2>Register your agent</h2>
@@ -748,11 +908,12 @@
         <button type="button" class="btn-ghost" id="modal-cancel">Cancel</button>
         <button type="submit" class="btn-primary">Sign &amp; register</button>
       </div>
-      <div id="form-status"></div>
+      <div id="form-status" class="status-text"></div>
     </form>
   </div>
 </div>
 
+<!-- Detail Modal -->
 <div class="modal-backdrop" id="detail-backdrop">
   <div class="modal">
     <h2 id="detail-name"></h2>
@@ -770,6 +931,7 @@
   </div>
 </div>
 
+<!-- Checker Modal -->
 <div class="modal-backdrop" id="checker-backdrop">
   <div class="modal">
     <h2>Check testnet activity</h2>
@@ -782,7 +944,7 @@
       <button type="button" class="btn-ghost" id="checker-close">Close</button>
       <button type="button" class="btn-primary" id="checker-run">Check</button>
     </div>
-    <div id="checker-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 10px; color: var(--sage);"></div>
+    <div id="checker-status" class="status-text"></div>
     <div class="checker-result" id="checker-result">
       <div class="checker-stat"><span>Transactions sent</span><span id="checker-txcount">—</span></div>
       <div class="checker-stat"><span>USDC balance</span><span id="checker-balance">—</span></div>
@@ -792,6 +954,7 @@
   </div>
 </div>
 
+<!-- Deploy Modal -->
 <div class="modal-backdrop" id="deploy-backdrop">
   <div class="modal">
     <h2>Deploy your agent identity</h2>
@@ -805,7 +968,7 @@
       <button type="button" class="btn-ghost" id="deploy-close">Close</button>
       <button type="button" class="btn-primary" id="deploy-run">Deploy identity</button>
     </div>
-    <div id="deploy-status" style="font-family: var(--font-mono); font-size: 12px; margin-top: 10px; color: var(--sage);"></div>
+    <div id="deploy-status" class="status-text"></div>
     <div id="deploy-result" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
       <div class="detail-row"><span class="detail-label">Agent ID</span><span class="detail-value" id="deploy-agentid"></span></div>
       <div class="detail-row"><span class="detail-label">Transaction</span><span class="detail-value"><a class="card-link" id="deploy-txlink" target="_blank" rel="noopener">view on explorer →</a></span></div>
@@ -813,6 +976,7 @@
   </div>
 </div>
 
+<!-- Celebrate Modal -->
 <div class="modal-backdrop" id="celebrate-backdrop">
   <div class="modal" style="text-align:center;">
     <div class="celebrate-seal" style="margin-left:auto; margin-right:auto;">✓</div>
@@ -844,13 +1008,12 @@ const ABI = [
   "event AgentRegistered(uint256 indexed id, address indexed owner, string name, string category)"
 ];
 
-// Confirmed live on Arc testnet — see https://docs.arc.network/arc/tutorials/register-your-first-ai-agent
 const ERC8004 = {
   identityRegistry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   reputationRegistry: "0x8004B663056A597Dffe9eCcC1965A193B7388713",
   validationRegistry: "0x8004Cb1BF31DAf7788923b405b754f57acEB4272"
 };
-// Standard ERC-721 interface + confirmed register() signature from Arc's own docs.
+
 const IDENTITY_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
   "function ownerOf(uint256 tokenId) view returns (address)",
@@ -861,33 +1024,27 @@ const IDENTITY_ABI = [
 const REPUTATION_ABI = [
   "event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
 ];
-// Confirmed against ERC-8004's published spec (matches Arc's own docs
-// wording for the validationRequest/validationResponse functions) — the
-// indexed-parameter order matters for the event's identifying hash, so
-// this is copied exactly, not guessed.
 const VALIDATION_ABI = [
   "event ValidationRequest(address indexed validatorAddress, uint256 indexed agentId, string requestURI, bytes32 indexed requestHash)",
   "event ValidationResponse(address indexed validatorAddress, uint256 indexed agentId, bytes32 indexed requestHash, uint8 response, string responseURI, bytes32 responseHash, string tag)"
 ];
-// Beacon's own dedicated wallet — the one the daily cron uses to autonomously
-// welcome new agents on Arc's official ERC-8004 reputation registry. This is
-// a public address, safe to reference directly in the frontend.
+
 const BEACON_WALLET_ADDRESS = "0x10149142bA352e37D2225b12F47FE306a8cD5250";
-const WELCOME_LOOKBACK_BLOCKS = 500_000; // generous but bounded, keeps the scan fast
+const WELCOME_LOOKBACK_BLOCKS = 500_000;
 
 /* ---------- State ---------- */
 let provider, signer, contract;
 let hasIdentity = false;
 let agents = [];
 
-/* ---------- Demo fallback data (shown until a real contract address is set) ---------- */
+/* ---------- Demo fallback data ---------- */
 const DEMO_AGENTS = [
   { id: 3, name: "Argus Price Watcher", description: "Monitors an onchain oracle and rebalances a USDC position using an LLM decision loop.", category: "trading", url: "#", owner: "0x7f2c...9a1e", active: true, registeredAt: Date.now()/1000 - 3600 },
   { id: 2, name: "StableFX Router", description: "Routes cross-currency stablecoin swaps to the best available FX rate on Arc.", category: "fx", url: "#", owner: "0x14bd...22f0", active: true, registeredAt: Date.now()/1000 - 86400 },
   { id: 1, name: "Vault Sentinel", description: "Watches lending positions and posts alerts before liquidation thresholds are hit.", category: "defi", url: "#", owner: "0xaa01...77c3", active: false, registeredAt: Date.now()/1000 - 172800 }
 ];
 
-/* ---------- Starter templates (curated, official Arc/Circle sample repos) ---------- */
+/* ---------- Templates ---------- */
 const TEMPLATES = [
   {
     name: "Arc Borrow & Lend",
@@ -899,28 +1056,7 @@ const TEMPLATES = [
   }
 ];
 
-function renderTemplates() {
-  const grid = document.getElementById("templates-grid");
-  grid.innerHTML = TEMPLATES.map(t => `
-    <div class="card template-card">
-      <span class="template-tag">Official template ${t.hasLiveDemo ? "· live demo on Beacon" : ""}</span>
-      <div class="card-name">${escapeHtml(t.name)}</div>
-      <div class="card-desc">${escapeHtml(t.description)}</div>
-      <div class="card-meta">
-        <span class="tag">${escapeHtml(t.category)}</span>
-        <a class="card-link" href="${escapeAttr(t.url)}" target="_blank" rel="noopener" data-internal-link="1">view repo →</a>
-      </div>
-      <div class="template-prereq">Needs: ${escapeHtml(t.prereq)}</div>
-      ${t.hasLiveDemo ? `<button class="btn-primary" data-try-live="1" style="margin-top:10px;">Try the live demo on Beacon</button>` : ""}
-    </div>
-  `).join("");
-  grid.querySelectorAll("[data-try-live]").forEach(btn => {
-    btn.addEventListener("click", () => switchTab("lending"));
-  });
-}
-
-// Beacon's own live deployment of Circle's arc-defi-lend-borrow sample.
-// github.com/circlefin/arc-defi-lend-borrow
+/* ---------- Lending Config ---------- */
 const LENDING = {
   cirBtcAddress: "0xf0C4a4CE82A5746AbAAd9425360Ab04fbBA432BF",
   usdcAddress: "0x990F5903BDe8129852D5e8321b133794E41a2C0A",
@@ -946,6 +1082,52 @@ const LENDING_ABI = [
   "function loans(address) view returns (uint256 amount, uint256 collateral, bool isActive)"
 ];
 
+/* ---------- Helpers ---------- */
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = str ?? "";
+  return d.innerHTML;
+}
+function escapeAttr(str) { return (str ?? "").replace(/"/g, "&quot;"); }
+function isSafeUrl(str) {
+  if (!str) return false;
+  try {
+    const u = new URL(str, window.location.href);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch { return false; }
+}
+function shortAddr(addr) {
+  if (!addr) return "";
+  return addr.length > 12 ? addr.slice(0,6) + "…" + addr.slice(-4) : addr;
+}
+function timeAgo(unixSeconds) {
+  const diff = Math.max(0, Date.now()/1000 - unixSeconds);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff/60) + "m ago";
+  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return Math.floor(diff/86400) + "d ago";
+}
+function toFetchableUri(uri) {
+  if (!uri) return null;
+  if (uri.startsWith("ipfs://")) return "https://ipfs.io/ipfs/" + uri.slice(7);
+  if (uri.startsWith("http")) return uri;
+  return null;
+}
+
+/* ---------- Log query helper ---------- */
+async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
+  const ranges = [];
+  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
+    ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
+  }
+  const chunks = await Promise.all(
+    ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
+  );
+  return chunks.flat();
+}
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+/* ---------- Tab switching ---------- */
 function switchTab(tab) {
   document.getElementById("tab-registry").classList.toggle("active", tab === "registry");
   document.getElementById("tab-templates").classList.toggle("active", tab === "templates");
@@ -957,7 +1139,6 @@ function switchTab(tab) {
   document.getElementById("lending-panel").style.display = tab === "lending" ? "block" : "none";
   document.getElementById("explorer-panel").style.display = tab === "explorer" ? "block" : "none";
 
-  // Registry-only states shouldn't show while browsing other tabs.
   if (tab === "registry") {
     applyFilter();
   } else {
@@ -971,15 +1152,6 @@ function switchTab(tab) {
 }
 
 /* ---------- Rendering ---------- */
-function timeAgo(unixSeconds) {
-  const diff = Math.max(0, Date.now()/1000 - unixSeconds);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return Math.floor(diff/60) + "m ago";
-  if (diff < 86400) return Math.floor(diff/3600) + "h ago";
-  return Math.floor(diff/86400) + "d ago";
-}
-
-/* ---------- Badges ---------- */
 function badgesFor(agent) {
   const badges = [];
   if (agent.id <= 10) badges.push("🏅 Genesis Signal");
@@ -992,11 +1164,6 @@ function badgesFor(agent) {
 
 function renderBadgeRow(container, badges, extraClass) {
   container.innerHTML = badges.map(b => `<span class="badge-chip ${extraClass || ""}">${escapeHtml(b)}</span>`).join("");
-}
-
-function shortAddr(addr) {
-  if (!addr) return "";
-  return addr.length > 12 ? addr.slice(0,6) + "…" + addr.slice(-4) : addr;
 }
 
 function renderAgents(list) {
@@ -1031,25 +1198,31 @@ function renderAgents(list) {
       ${a.url && a.url !== "#" && isSafeUrl(a.url) ? `<a class="card-link" href="${escapeAttr(a.url)}" target="_blank" rel="noopener" data-internal-link="1">view →</a>` : ""}
     `;
     card.addEventListener("click", (e) => {
-      if (e.target.closest("[data-internal-link]")) return; // let the link open normally
+      if (e.target.closest("[data-internal-link]")) return;
       openDetail(a);
     });
     grid.appendChild(card);
   }
 }
 
-function escapeHtml(str) {
-  const d = document.createElement("div");
-  d.textContent = str ?? "";
-  return d.innerHTML;
-}
-function escapeAttr(str) { return (str ?? "").replace(/"/g, "&quot;"); }
-function isSafeUrl(str) {
-  if (!str) return false;
-  try {
-    const u = new URL(str, window.location.href);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch { return false; }
+function renderTemplates() {
+  const grid = document.getElementById("templates-grid");
+  grid.innerHTML = TEMPLATES.map(t => `
+    <div class="card template-card">
+      <span class="template-tag">Official template ${t.hasLiveDemo ? "· live demo on Beacon" : ""}</span>
+      <div class="card-name">${escapeHtml(t.name)}</div>
+      <div class="card-desc">${escapeHtml(t.description)}</div>
+      <div class="card-meta">
+        <span class="tag">${escapeHtml(t.category)}</span>
+        <a class="card-link" href="${escapeAttr(t.url)}" target="_blank" rel="noopener" data-internal-link="1">view repo →</a>
+      </div>
+      <div class="template-prereq">Needs: ${escapeHtml(t.prereq)}</div>
+      ${t.hasLiveDemo ? `<button class="btn-primary" data-try-live="1" style="margin-top:10px;">Try the live demo on Beacon</button>` : ""}
+    </div>
+  `).join("");
+  grid.querySelectorAll("[data-try-live]").forEach(btn => {
+    btn.addEventListener("click", () => switchTab("lending"));
+  });
 }
 
 function applyFilter() {
@@ -1067,25 +1240,417 @@ function updateStats() {
   document.getElementById("stat-active").textContent = agents.filter(a => a.active).length;
 }
 
-/* ---------- Shared helper: chunked + parallel log queries ---------- */
-// Same pattern already proven reliable in the backend cron — keeps each
-// individual eth_getLogs call within a safe block range, and runs all
-// chunks concurrently rather than one at a time.
-async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
-  const ranges = [];
-  for (let start = fromBlock; start <= toBlock; start += chunkSize) {
-    ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
-  }
-  const chunks = await Promise.all(
-    ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
-  );
-  return chunks.flat();
-}
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+/* ---------- Contract reads ---------- */
+const MAX_ATTEMPTS = 8;
 
-/* ---------- Beacon's own welcome activity (real onchain feedback given) ---------- */
-// Counts NewFeedback events where Beacon's own wallet is the client — i.e.
-// agents Beacon has actually, autonomously welcomed via the daily cron.
+async function loadAgents(attempt = 1) {
+  const isConfigured = CONFIG.registryAddress && CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000";
+
+  if (!isConfigured) {
+    agents = DEMO_AGENTS;
+    document.getElementById("loading-state").style.display = "none";
+    document.getElementById("demo-banner").style.display = "block";
+    updateStats();
+    applyFilter();
+    return;
+  }
+
+  document.getElementById("loading-state").style.display = "block";
+  document.getElementById("demo-banner").style.display = "none";
+
+  if (typeof ethers === "undefined") {
+    if (attempt <= MAX_ATTEMPTS) {
+      setTimeout(() => loadAgents(attempt + 1), 500 * attempt);
+      return;
+    }
+    showDemoFallback();
+    return;
+  }
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const readContract = new ethers.Contract(CONFIG.registryAddress, ABI, readProvider);
+    const total = Number(await readContract.totalAgents());
+    const raw = total > 0 ? await readContract.getAgents(0, Math.min(total, 100)) : [];
+    agents = raw.map(a => ({
+      id: Number(a.id),
+      owner: a.owner,
+      name: a.name,
+      description: a.description,
+      category: a.category,
+      url: a.url,
+      registeredAt: Number(a.registeredAt),
+      active: a.active
+    }));
+    document.getElementById("loading-state").style.display = "none";
+    document.getElementById("demo-banner").style.display = "none";
+  } catch (err) {
+    if (attempt <= MAX_ATTEMPTS) {
+      const delay = Math.min(1000 * attempt, 6000);
+      setTimeout(() => loadAgents(attempt + 1), delay);
+      return;
+    }
+    showDemoFallback();
+    return;
+  }
+  updateStats();
+  applyFilter();
+}
+
+function showDemoFallback() {
+  agents = DEMO_AGENTS;
+  document.getElementById("loading-state").style.display = "none";
+  document.getElementById("demo-banner").style.display = "block";
+  updateStats();
+  applyFilter();
+}
+
+/* ---------- Wallet ---------- */
+async function connectWallet() {
+  if (!window.ethereum) {
+    document.getElementById("wallet-status").textContent = "no wallet found";
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CONFIG.chainIdHex }] });
+    } catch (switchErr) {
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: CONFIG.chainIdHex,
+            chainName: CONFIG.chainName,
+            rpcUrls: [CONFIG.rpcUrl],
+            nativeCurrency: CONFIG.nativeCurrency,
+            blockExplorerUrls: [CONFIG.blockExplorerUrl]
+          }]
+        });
+      }
+    }
+
+    const addr = await signer.getAddress();
+    document.getElementById("wallet-status").textContent = shortAddr(addr);
+    document.getElementById("connect-btn").textContent = "Connected";
+    document.getElementById("hero-actions").style.display = "flex";
+
+    if (CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000") {
+      contract = new ethers.Contract(CONFIG.registryAddress, ABI, signer);
+    }
+
+    await refreshIdentityStatus();
+  } catch (err) {
+    console.error(err);
+    document.getElementById("wallet-status").textContent = "connection failed";
+  }
+}
+
+/* ---------- Identity gate ---------- */
+async function refreshIdentityStatus() {
+  if (!signer || !provider) {
+    hasIdentity = false;
+    updateRegisterGate();
+    return;
+  }
+  try {
+    const addr = await signer.getAddress();
+    const identityRead = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, provider);
+    const bal = await identityRead.balanceOf(addr);
+    hasIdentity = Number(bal) > 0;
+  } catch (err) {
+    hasIdentity = false;
+  }
+  updateRegisterGate();
+}
+
+function updateRegisterGate() {
+  const hint = document.getElementById("hero-hint");
+  const registerBtn = document.getElementById("register-btn");
+  if (!signer) {
+    hint.textContent = "Connect your wallet to get started.";
+    registerBtn.classList.remove("btn-disabled");
+  } else if (!hasIdentity) {
+    hint.textContent = "You'll need to deploy an agent identity before you can register it in the directory.";
+    registerBtn.classList.add("btn-disabled");
+  } else {
+    hint.textContent = "";
+    registerBtn.classList.remove("btn-disabled");
+  }
+}
+
+/* ---------- Celebration ---------- */
+function celebrate({ title, sub, detail, explorerUrl }) {
+  document.getElementById("celebrate-title").textContent = title;
+  document.getElementById("celebrate-sub").textContent = sub || "";
+  document.getElementById("celebrate-detail").textContent = detail || "";
+  const link = document.getElementById("celebrate-link");
+  if (explorerUrl) {
+    link.href = explorerUrl;
+    link.style.display = "inline-block";
+  } else {
+    link.style.display = "none";
+  }
+  document.getElementById("celebrate-backdrop").classList.add("open");
+}
+
+/* ---------- Detail modal ---------- */
+async function openDetail(agent) {
+  document.getElementById("detail-name").textContent = agent.name;
+  document.getElementById("detail-id").textContent = `BEACON-${String(agent.id).padStart(4,"0")}`;
+  document.getElementById("detail-desc").textContent = agent.description;
+  document.getElementById("detail-category").textContent = agent.category || "other";
+  document.getElementById("detail-owner").textContent = agent.owner;
+  document.getElementById("detail-date").textContent = new Date(agent.registeredAt * 1000).toLocaleString();
+  document.getElementById("detail-status").textContent = agent.active ? "Active" : "Inactive";
+
+  const linkRow = document.getElementById("detail-link-row");
+  if (agent.url && agent.url !== "#") {
+    linkRow.style.display = "flex";
+    document.getElementById("detail-link").href = agent.url;
+  } else {
+    linkRow.style.display = "none";
+  }
+
+  const badges = badgesFor(agent);
+  renderBadgeRow(document.getElementById("detail-badges"), badges);
+  document.getElementById("detail-backdrop").classList.add("open");
+
+  try {
+    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+    const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+    const bal = await identityContract.balanceOf(agent.owner);
+    if (Number(bal) > 0) {
+      const current = badgesFor(agent);
+      current.push("🪪 Verified Identity (ERC-8004)");
+      renderBadgeRow(document.getElementById("detail-badges"), current);
+    }
+  } catch (err) {
+    console.warn("ERC-8004 identity check failed:", err.message);
+  }
+}
+
+/* ---------- Activity Checker (FIXED) ---------- */
+async function runActivityCheck() {
+  const addrInput = document.getElementById("checker-address").value.trim();
+  const status = document.getElementById("checker-status");
+  const result = document.getElementById("checker-result");
+
+  status.className = "status-text";
+  result.style.display = "none";
+
+  if (!addrInput) {
+    status.textContent = "Enter a wallet address.";
+    status.classList.add("error");
+    return;
+  }
+  if (!ethers.isAddress(addrInput)) {
+    status.textContent = "Enter a valid Ethereum address (0x…).";
+    status.classList.add("error");
+    return;
+  }
+  if (typeof ethers === "undefined") {
+    status.textContent = "Still loading libraries — try again in a moment.";
+    return;
+  }
+
+  status.innerHTML = '<span class="loading-spinner"></span>Checking Arc testnet…';
+
+  // Try up to 3 times with backoff
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+
+      // Test connection first with a simple call
+      await readProvider.getBlockNumber();
+
+      const [txCount, balanceWei] = await Promise.all([
+        readProvider.getTransactionCount(addrInput),
+        readProvider.getBalance(addrInput)
+      ]);
+
+      const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
+      const identityBalance = await identityContract.balanceOf(addrInput);
+
+      document.getElementById("checker-txcount").textContent = txCount;
+      document.getElementById("checker-balance").textContent = ethers.formatEther(balanceWei) + " USDC";
+      document.getElementById("checker-identity").textContent = identityBalance.toString();
+
+      const badges = [];
+      if (txCount > 0) badges.push("🟢 Active on Arc");
+      if (txCount >= 20) badges.push("⚡ Power User");
+      if (Number(identityBalance) > 0) badges.push("🪪 Registered Identity (ERC-8004)");
+      renderBadgeRow(document.getElementById("checker-badges"), badges, "identity");
+
+      status.textContent = "";
+      status.className = "status-text success";
+      status.textContent = "Check complete — data from Arc testnet.";
+      result.style.display = "block";
+      return; // Success!
+
+    } catch (err) {
+      lastErr = err;
+      console.warn(`Checker attempt ${attempt} failed:`, err.message);
+      if (attempt < 3) {
+        status.innerHTML = `<span class="loading-spinner"></span>Retrying (${attempt}/3)…`;
+        await new Promise(r => setTimeout(r, 1000 * attempt));
+      }
+    }
+  }
+
+  // All attempts failed
+  console.error("Activity check failed after retries:", lastErr);
+  status.className = "status-text error";
+
+  // Show specific error message based on the error
+  let errorMsg = "Couldn't reach Arc testnet — the RPC may be temporarily unavailable.";
+  if (lastErr?.message?.includes("CORS")) {
+    errorMsg = "Browser blocked the connection (CORS). Try using a different network or VPN.";
+  } else if (lastErr?.message?.includes("network")) {
+    errorMsg = "Network error — check your internet connection.";
+  } else if (lastErr?.message?.includes("timeout")) {
+    errorMsg = "Connection timed out — Arc testnet may be slow right now.";
+  }
+
+  status.innerHTML = errorMsg + '<br><button class="btn-ghost" style="margin-top:8px;" onclick="runActivityCheck()">Try again</button>';
+}
+
+function openChecker() {
+  document.getElementById("checker-backdrop").classList.add("open");
+  document.getElementById("checker-result").style.display = "none";
+  const status = document.getElementById("checker-status");
+  status.textContent = "";
+  status.className = "status-text";
+  if (signer) {
+    signer.getAddress().then(a => document.getElementById("checker-address").value = a).catch(() => {});
+  }
+}
+function closeChecker() { 
+  document.getElementById("checker-backdrop").classList.remove("open"); 
+}
+
+/* ---------- Deploy ---------- */
+function openDeploy() {
+  document.getElementById("deploy-backdrop").classList.add("open");
+  document.getElementById("deploy-result").style.display = "none";
+  document.getElementById("deploy-status").textContent = "";
+}
+function closeDeploy() { 
+  document.getElementById("deploy-backdrop").classList.remove("open"); 
+}
+
+async function runDeploy() {
+  const status = document.getElementById("deploy-status");
+  const metadataURI = document.getElementById("deploy-metadata").value.trim();
+
+  if (!signer) {
+    status.textContent = "Connect your wallet first.";
+    status.className = "status-text error";
+    return;
+  }
+  if (!metadataURI) {
+    status.textContent = "Enter a metadata URI.";
+    status.className = "status-text error";
+    return;
+  }
+
+  status.className = "status-text";
+  try {
+    const identityWrite = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, signer);
+    status.innerHTML = '<span class="loading-spinner"></span>Waiting for signature…';
+    const tx = await identityWrite.register(metadataURI);
+    status.innerHTML = '<span class="loading-spinner"></span>Confirming onchain…';
+    const receipt = await tx.wait();
+
+    const iface = new ethers.Interface(IDENTITY_ABI);
+    let agentId = null;
+    for (const log of receipt.logs) {
+      try {
+        const parsed = iface.parseLog(log);
+        if (parsed && parsed.name === "Transfer") {
+          agentId = parsed.args.tokenId.toString();
+          break;
+        }
+      } catch (_) {}
+    }
+
+    status.textContent = "Deployed.";
+    status.className = "status-text success";
+    document.getElementById("deploy-agentid").textContent = agentId ?? "(check explorer)";
+    document.getElementById("deploy-txlink").href = `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`;
+    document.getElementById("deploy-result").style.display = "block";
+    closeDeploy();
+    await refreshIdentityStatus();
+    celebrate({
+      title: "Agent identity deployed 🎉",
+      sub: "Your agent now has a real, onchain ERC-8004 identity on Arc.",
+      detail: agentId ? `Agent ID #${agentId}` : "",
+      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
+    });
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Transaction failed or was rejected.";
+    status.className = "status-text error";
+  }
+}
+
+/* ---------- Registration ---------- */
+function openModal() { 
+  document.getElementById("modal-backdrop").classList.add("open"); 
+}
+function closeModal() {
+  document.getElementById("modal-backdrop").classList.remove("open");
+  document.getElementById("form-status").textContent = "";
+  document.getElementById("form-status").className = "status-text";
+}
+
+async function handleRegisterSubmit(e) {
+  e.preventDefault();
+  const status = document.getElementById("form-status");
+  status.className = "status-text";
+
+  const name = document.getElementById("f-name").value.trim();
+  const description = document.getElementById("f-desc").value.trim();
+  const category = document.getElementById("f-category").value;
+  const url = document.getElementById("f-url").value.trim();
+
+  if (!signer) {
+    status.textContent = "Connect your wallet first.";
+    status.className = "status-text error";
+    return;
+  }
+  if (!contract) {
+    status.textContent = "Registry contract address isn't configured yet.";
+    status.className = "status-text error";
+    return;
+  }
+
+  try {
+    status.innerHTML = '<span class="loading-spinner"></span>Waiting for signature…';
+    const tx = await contract.register(name, description, category, url);
+    status.innerHTML = '<span class="loading-spinner"></span>Confirming onchain…';
+    await tx.wait();
+    status.textContent = "Registered. Refreshing list…";
+    status.className = "status-text success";
+    await loadAgents();
+    closeModal();
+    celebrate({
+      title: "You're on the Beacon 🎉",
+      sub: `"${name}" is now live in the registry for anyone on Arc to find.`,
+      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
+    });
+  } catch (err) {
+    console.error(err);
+    status.textContent = "Transaction failed or was rejected.";
+    status.className = "status-text error";
+  }
+}
+
+/* ---------- Welcome activity ---------- */
 async function pollWelcomeActivity() {
   const subEl = document.getElementById("welcomed-sub");
   const statEl = document.getElementById("stat-welcomed");
@@ -1111,10 +1676,7 @@ async function pollWelcomeActivity() {
   }
 }
 
-/* ---------- Arc-wide agent identity count (all of ERC-8004, not just Beacon) ---------- */
-// Counts every mint (Transfer from the zero address) on Arc's official
-// IdentityRegistry — i.e. every real agent identity that exists on Arc,
-// whether or not it's registered on Beacon or has ever received feedback.
+/* ---------- Identity count ---------- */
 async function pollIdentityCount() {
   const statEl = document.getElementById("stat-identities");
   const subEl = document.getElementById("identities-sub");
@@ -1122,8 +1684,6 @@ async function pollIdentityCount() {
 
   const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
 
-  // Try the cheap, exact route first: if the registry exposes totalSupply(),
-  // that's the true all-time count in a single call, no scanning needed.
   try {
     const supplyAbi = ["function totalSupply() view returns (uint256)"];
     const identitySupply = new ethers.Contract(ERC8004.identityRegistry, supplyAbi, readProvider);
@@ -1132,13 +1692,9 @@ async function pollIdentityCount() {
     subEl.textContent = "Every agent that has registered a real onchain identity on Arc's official ERC-8004 registry — not just those checked into Beacon.";
     return;
   } catch (err) {
-    // No totalSupply() exposed — fall through to event-scanning below.
+    // Fallback to event scanning
   }
 
-  // Fallback: count mint events within a bounded window. Arc's own docs use
-  // this same event-scanning approach, since the base contract doesn't
-  // expose a supply counter — so this is scoped to a recent window, not
-  // full history, and labeled honestly as such.
   try {
     const identity = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
     const filter = identity.filters.Transfer(ZERO_ADDRESS, null, null);
@@ -1148,31 +1704,32 @@ async function pollIdentityCount() {
     const mints = await queryLogsChunked(identity, filter, fromBlock, currentBlock, 10_000);
 
     statEl.textContent = mints.length.toLocaleString() + "+";
-    subEl.textContent = `Counted from the last ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()} blocks — older identities may exist beyond this window, so this is a lower bound, not the full all-time total.`;
+    subEl.textContent = `Counted from the last ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()} blocks — older identities may exist beyond this window.`;
   } catch (err) {
     statEl.textContent = "—";
   }
 }
 
-/* ---------- Explorer: look up ANY agent on Arc, not just Beacon's own registry ---------- */
-
-// Converts ipfs:// URIs to a fetchable gateway URL; leaves http(s) untouched.
-function toFetchableUri(uri) {
-  if (!uri) return null;
-  if (uri.startsWith("ipfs://")) return "https://ipfs.io/ipfs/" + uri.slice(7);
-  if (uri.startsWith("http")) return uri;
-  return null; // data: URIs and anything else: don't attempt a network fetch
-}
-
+/* ---------- Explorer ---------- */
 async function lookupAgent(rawInput) {
   const statusEl = document.getElementById("explorer-status");
   const resultEl = document.getElementById("explorer-result");
   resultEl.style.display = "none";
   statusEl.textContent = "";
+  statusEl.className = "status-text";
 
   const input = (rawInput || "").trim();
-  if (!input) { statusEl.textContent = "Enter an agent ID or wallet address."; return; }
-  if (typeof ethers === "undefined") { statusEl.textContent = "Still loading — try again in a moment."; return; }
+  if (!input) { 
+    statusEl.textContent = "Enter an agent ID or wallet address."; 
+    statusEl.className = "status-text error";
+    return; 
+  }
+  if (typeof ethers === "undefined") { 
+    statusEl.textContent = "Still loading — try again in a moment."; 
+    return; 
+  }
+
+  statusEl.innerHTML = '<span class="loading-spinner"></span>Connecting to Arc…';
 
   try {
     const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
@@ -1182,25 +1739,21 @@ async function lookupAgent(rawInput) {
     if (/^\d+$/.test(input)) {
       agentId = BigInt(input);
     } else if (ethers.isAddress(input)) {
-      // Unbounded, definitive check first: does this address hold ANY
-      // identity right now? This isn't limited by a scan window, unlike
-      // the event search below, so a zero answer here is certain.
-      statusEl.textContent = "Checking this address on Arc's identity registry…";
+      statusEl.innerHTML = '<span class="loading-spinner"></span>Checking this address…';
       const balance = await identity.balanceOf(input);
       if (balance === 0n) {
-        statusEl.textContent = "This address has never held an ERC-8004 agent identity on Arc — confirmed directly from the registry, not just a recent-window scan.";
+        statusEl.textContent = "This address has never held an ERC-8004 agent identity on Arc.";
+        statusEl.className = "status-text error";
         return;
       }
 
-      statusEl.textContent = "Confirmed this address holds an identity — locating which agent ID…";
+      statusEl.innerHTML = '<span class="loading-spinner"></span>Locating agent ID…';
       const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, input, null);
       const currentBlock = await readProvider.getBlockNumber();
       const fromBlock = Math.max(0, currentBlock - WELCOME_LOOKBACK_BLOCKS);
       const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, 10_000);
+
       if (mints.length === 0) {
-        // Before giving up, try the ERC-721 Enumerable extension if this
-        // contract happens to support it — a few cheap direct calls instead
-        // of a much larger block scan. Gracefully falls through if not supported.
         try {
           const enumerableAbi = ["function tokenOfOwnerByIndex(address owner, uint256 index) view returns (uint256)"];
           const enumerable = new ethers.Contract(ERC8004.identityRegistry, enumerableAbi, readProvider);
@@ -1223,7 +1776,7 @@ async function lookupAgent(rawInput) {
             return;
           }
         } catch (enumErr) {
-          statusEl.textContent = `This address does hold an agent identity (balance: ${balance.toString()}), but its mint happened before our ~${WELCOME_LOOKBACK_BLOCKS.toLocaleString()}-block scan window, and this contract doesn't support direct enumeration either — try looking it up by agent ID directly if you know it.`;
+          statusEl.textContent = `This address holds ${balance.toString()} identity(ies), but the mint is outside our scan window. Look it up by agent ID directly.`;
           return;
         }
       } else {
@@ -1231,10 +1784,11 @@ async function lookupAgent(rawInput) {
       }
     } else {
       statusEl.textContent = "That doesn't look like a valid agent ID or wallet address.";
+      statusEl.className = "status-text error";
       return;
     }
 
-    statusEl.textContent = `Reading agent #${agentId.toString()} from Arc…`;
+    statusEl.innerHTML = `<span class="loading-spinner"></span>Reading agent #${agentId.toString()}…`;
 
     let owner, tokenURI;
     try {
@@ -1244,35 +1798,35 @@ async function lookupAgent(rawInput) {
       ]);
     } catch (err) {
       statusEl.textContent = `No agent found with ID ${agentId.toString()}.`;
+      statusEl.className = "status-text error";
       return;
     }
 
-    statusEl.textContent = "Reading reputation history…";
+    statusEl.innerHTML = '<span class="loading-spinner"></span>Reading reputation history…';
     const reputation = new ethers.Contract(ERC8004.reputationRegistry, REPUTATION_ABI, readProvider);
     const repFilter = reputation.filters.NewFeedback(agentId, null);
     const currentBlock2 = await readProvider.getBlockNumber();
     const fromBlock2 = Math.max(0, currentBlock2 - WELCOME_LOOKBACK_BLOCKS);
     const repEvents = await queryLogsChunked(reputation, repFilter, fromBlock2, currentBlock2, 10_000);
 
-    // Best-effort metadata fetch — many registration files will fail here due
-    // to CORS or simply not existing, and that's fine: it degrades gracefully
-    // rather than blocking the rest of the lookup.
     let metadata = null;
     const fetchUrl = toFetchableUri(tokenURI);
     if (fetchUrl) {
       try {
         const resp = await fetch(fetchUrl, { signal: AbortSignal.timeout(5000) });
         if (resp.ok) metadata = await resp.json();
-      } catch (err) { /* silent — metadata is optional context, not required */ }
+      } catch (err) {}
     }
 
     const beaconEntry = agents.find(a => a.owner.toLowerCase() === owner.toLowerCase());
 
     await renderExplorerResult({ agentId, owner, tokenURI, metadata, repEvents, beaconEntry });
     statusEl.textContent = "";
+    statusEl.className = "status-text success";
   } catch (err) {
     console.error(err);
-    statusEl.textContent = "Couldn't complete the lookup — Arc testnet may be slow to respond right now, try again.";
+    statusEl.textContent = "Couldn't complete the lookup — Arc testnet may be slow. Try again.";
+    statusEl.className = "status-text error";
   }
 }
 
@@ -1305,9 +1859,6 @@ async function renderExplorerResult({ agentId, owner, tokenURI, metadata, repEve
   repEl.textContent = hasReputation ? `${repEvents.length} feedback event${repEvents.length === 1 ? "" : "s"}` : "No feedback yet";
   repEl.className = hasReputation ? "trust-value good" : "trust-value neutral";
 
-  // Honest limitation: ValidationRegistry lookups are keyed by a request
-  // hash we don't have on hand for an arbitrary agent, so we don't fake a
-  // status here rather than guess at an unverified call.
   const valEl = document.getElementById("trust-validation");
   valEl.textContent = "Not available in this view";
   valEl.className = "trust-value neutral";
@@ -1332,9 +1883,6 @@ async function renderExplorerResult({ agentId, owner, tokenURI, metadata, repEve
     activityEl.className = "trust-value neutral";
   }
 
-  // Summary — a plain-language sentence assembled only from facts we just
-  // verified onchain (or from the agent's own registration file, clearly
-  // attributed). Not an inferred or generated claim.
   let summary = `Agent #${agentId.toString()} is owned by ${shortAddr(owner)}.`;
   if (metadata?.description) {
     const desc = metadata.description.length > 140 ? metadata.description.slice(0, 140) + "…" : metadata.description;
@@ -1360,7 +1908,7 @@ async function renderExplorerResult({ agentId, owner, tokenURI, metadata, repEve
   }
 }
 
-/* ---------- Explorer: browse recently minted agents (discovery, not just direct search) ---------- */
+/* ---------- Explorer browse ---------- */
 let explorerBrowseCache = [];
 
 async function loadExplorerBrowseList() {
@@ -1368,7 +1916,7 @@ async function loadExplorerBrowseList() {
   const listEl = document.getElementById("explorer-browse-list");
   if (typeof ethers === "undefined") return;
 
-  statusEl.textContent = "Scanning Arc for recently minted agents…";
+  statusEl.innerHTML = '<span class="loading-spinner"></span>Scanning Arc for recently minted agents…';
   listEl.innerHTML = "";
 
   try {
@@ -1440,276 +1988,7 @@ function applyExplorerBrowseFilter() {
   });
 }
 
-/* ---------- Contract reads ---------- */
-const MAX_ATTEMPTS = 8;
-
-async function loadAgents(attempt = 1) {
-  const isConfigured = CONFIG.registryAddress && CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000";
-
-  if (!isConfigured) {
-    agents = DEMO_AGENTS;
-    document.getElementById("loading-state").style.display = "none";
-    document.getElementById("demo-banner").style.display = "block";
-    updateStats();
-    applyFilter();
-    return;
-  }
-
-  document.getElementById("loading-state").style.display = "block";
-  document.getElementById("demo-banner").style.display = "none";
-
-  // Guard against the ethers CDN script not having finished loading yet.
-  if (typeof ethers === "undefined") {
-    if (attempt <= MAX_ATTEMPTS) {
-      console.warn(`ethers not ready yet, retrying (attempt ${attempt}/${MAX_ATTEMPTS})...`);
-      setTimeout(() => loadAgents(attempt + 1), 500 * attempt);
-      return;
-    }
-    console.error("ethers.js failed to load after retries, showing demo data.");
-    showDemoFallback();
-    return;
-  }
-
-  try {
-    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
-    const readContract = new ethers.Contract(CONFIG.registryAddress, ABI, readProvider);
-    const total = Number(await readContract.totalAgents());
-    const raw = total > 0 ? await readContract.getAgents(0, Math.min(total, 100)) : [];
-    agents = raw.map(a => ({
-      id: Number(a.id),
-      owner: a.owner,
-      name: a.name,
-      description: a.description,
-      category: a.category,
-      url: a.url,
-      registeredAt: Number(a.registeredAt),
-      active: a.active
-    }));
-    document.getElementById("loading-state").style.display = "none";
-    document.getElementById("demo-banner").style.display = "none";
-  } catch (err) {
-    if (attempt <= MAX_ATTEMPTS) {
-      // Exponential-ish backoff: gives slow RPC cold-starts or a security tool
-      // scanning the first request to a new domain plenty of time to clear.
-      const delay = Math.min(1000 * attempt, 6000);
-      console.warn(`Chain read failed, retrying in ${delay}ms (attempt ${attempt}/${MAX_ATTEMPTS})...`, err.message);
-      setTimeout(() => loadAgents(attempt + 1), delay);
-      return;
-    }
-    console.error("Failed to load from chain after all retries:", err);
-    showDemoFallback();
-    return;
-  }
-  updateStats();
-  applyFilter();
-}
-
-function showDemoFallback() {
-  agents = DEMO_AGENTS;
-  document.getElementById("loading-state").style.display = "none";
-  document.getElementById("demo-banner").style.display = "block";
-  updateStats();
-  applyFilter();
-}
-
-/* ---------- Wallet ---------- */
-async function connectWallet() {
-  if (!window.ethereum) {
-    document.getElementById("wallet-status").textContent = "no wallet found";
-    return;
-  }
-  try {
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-
-    // try to switch/add Arc testnet
-    try {
-      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CONFIG.chainIdHex }] });
-    } catch (switchErr) {
-      if (switchErr.code === 4902) {
-        await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [{
-            chainId: CONFIG.chainIdHex,
-            chainName: CONFIG.chainName,
-            rpcUrls: [CONFIG.rpcUrl],
-            nativeCurrency: CONFIG.nativeCurrency,
-            blockExplorerUrls: [CONFIG.blockExplorerUrl]
-          }]
-        });
-      }
-    }
-
-    const addr = await signer.getAddress();
-    document.getElementById("wallet-status").textContent = shortAddr(addr);
-    document.getElementById("connect-btn").textContent = "Connected";
-    document.getElementById("hero-actions").style.display = "flex";
-
-    if (CONFIG.registryAddress !== "0x0000000000000000000000000000000000000000") {
-      contract = new ethers.Contract(CONFIG.registryAddress, ABI, signer);
-    }
-
-    await refreshIdentityStatus();
-  } catch (err) {
-    console.error(err);
-    document.getElementById("wallet-status").textContent = "connection failed";
-  }
-}
-
-/* ---------- Register gate: must hold an ERC-8004 identity before registering in Beacon ---------- */
-async function refreshIdentityStatus() {
-  if (!signer || !provider) {
-    hasIdentity = false;
-    updateRegisterGate();
-    return;
-  }
-  try {
-    const addr = await signer.getAddress();
-    const identityRead = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, provider);
-    const bal = await identityRead.balanceOf(addr);
-    hasIdentity = Number(bal) > 0;
-  } catch (err) {
-    console.error(err);
-    hasIdentity = false;
-  }
-  updateRegisterGate();
-}
-
-function updateRegisterGate() {
-  const hint = document.getElementById("hero-hint");
-  const registerBtn = document.getElementById("register-btn");
-  if (!signer) {
-    hint.textContent = "Connect your wallet to get started.";
-    registerBtn.classList.remove("btn-disabled");
-  } else if (!hasIdentity) {
-    hint.textContent = "You'll need to deploy an agent identity before you can register it in the directory.";
-    registerBtn.classList.add("btn-disabled");
-  } else {
-    hint.textContent = "";
-    registerBtn.classList.remove("btn-disabled");
-  }
-}
-
-/* ---------- Celebration ---------- */
-function celebrate({ title, sub, detail, explorerUrl }) {
-  document.getElementById("celebrate-title").textContent = title;
-  document.getElementById("celebrate-sub").textContent = sub || "";
-  document.getElementById("celebrate-detail").textContent = detail || "";
-  const link = document.getElementById("celebrate-link");
-  if (explorerUrl) {
-    link.href = explorerUrl;
-    link.style.display = "inline-block";
-  } else {
-    link.style.display = "none";
-  }
-  document.getElementById("celebrate-backdrop").classList.add("open");
-}
-document.getElementById("celebrate-close").addEventListener("click", () => {
-  document.getElementById("celebrate-backdrop").classList.remove("open");
-});
-document.getElementById("celebrate-backdrop").addEventListener("click", (e) => {
-  if (e.target.id === "celebrate-backdrop") document.getElementById("celebrate-backdrop").classList.remove("open");
-});
-
-/* ---------- Detail modal ---------- */
-async function openDetail(agent) {
-  document.getElementById("detail-name").textContent = agent.name;
-  document.getElementById("detail-id").textContent = `BEACON-${String(agent.id).padStart(4,"0")}`;
-  document.getElementById("detail-desc").textContent = agent.description;
-  document.getElementById("detail-category").textContent = agent.category || "other";
-  document.getElementById("detail-owner").textContent = agent.owner;
-  document.getElementById("detail-date").textContent = new Date(agent.registeredAt * 1000).toLocaleString();
-  document.getElementById("detail-status").textContent = agent.active ? "Active" : "Inactive";
-
-  const linkRow = document.getElementById("detail-link-row");
-  if (agent.url && agent.url !== "#") {
-    linkRow.style.display = "flex";
-    document.getElementById("detail-link").href = agent.url;
-  } else {
-    linkRow.style.display = "none";
-  }
-
-  const badges = badgesFor(agent);
-  renderBadgeRow(document.getElementById("detail-badges"), badges);
-
-  document.getElementById("detail-backdrop").classList.add("open");
-
-  // Live-check ERC-8004 identity for this agent's owner (best-effort, non-blocking on failure).
-  try {
-    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
-    const identityContract = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider);
-    const bal = await identityContract.balanceOf(agent.owner);
-    if (Number(bal) > 0) {
-      const current = badgesFor(agent);
-      current.push("🪪 Verified Identity (ERC-8004)");
-      renderBadgeRow(document.getElementById("detail-badges"), current);
-    }
-  } catch (err) {
-    console.warn("ERC-8004 identity check failed:", err.message);
-  }
-}
-document.getElementById("detail-close").addEventListener("click", () => {
-  document.getElementById("detail-backdrop").classList.remove("open");
-});
-document.getElementById("detail-backdrop").addEventListener("click", (e) => {
-  if (e.target.id === "detail-backdrop") document.getElementById("detail-backdrop").classList.remove("open");
-});
-
-/* ---------- Wallet activity checker ---------- */
-async function runActivityCheck() {
-  const addrInput = document.getElementById("checker-address").value.trim();
-  const status = document.getElementById("checker-status");
-  const result = document.getElementById("checker-result");
-
-  if (!ethers.isAddress(addrInput)) {
-    status.textContent = "Enter a valid address.";
-    result.style.display = "none";
-    return;
-  }
-
-  status.textContent = "Checking Arc testnet…";
-  result.style.display = "none";
-
-  try {
-    const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
-    const [txCount, balanceWei, identityContract] = await Promise.all([
-      readProvider.getTransactionCount(addrInput),
-      readProvider.getBalance(addrInput),
-      Promise.resolve(new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, readProvider))
-    ]);
-    const identityBalance = await identityContract.balanceOf(addrInput);
-
-    document.getElementById("checker-txcount").textContent = txCount;
-    document.getElementById("checker-balance").textContent = ethers.formatEther(balanceWei) + " USDC";
-    document.getElementById("checker-identity").textContent = identityBalance.toString();
-
-    const badges = [];
-    if (txCount > 0) badges.push("🟢 Active on Arc");
-    if (txCount >= 20) badges.push("⚡ Power User");
-    if (Number(identityBalance) > 0) badges.push("🪪 Registered Identity (ERC-8004)");
-    renderBadgeRow(document.getElementById("checker-badges"), badges, "identity");
-
-    status.textContent = "";
-    result.style.display = "block";
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Couldn't reach Arc testnet — try again in a moment.";
-  }
-}
-
-function openChecker() {
-  document.getElementById("checker-backdrop").classList.add("open");
-  document.getElementById("checker-result").style.display = "none";
-  document.getElementById("checker-status").textContent = "";
-  if (signer) {
-    signer.getAddress().then(a => document.getElementById("checker-address").value = a).catch(() => {});
-  }
-}
-function closeChecker() { document.getElementById("checker-backdrop").classList.remove("open"); }
-
-/* ---------- Deploy agent identity (ERC-8004) ---------- */
-/* ---------- Lend & Borrow (Beacon's own live deployment) ---------- */
+/* ---------- Lending ---------- */
 function toUnits(amountStr) {
   return ethers.parseUnits((amountStr || "0").trim(), LENDING.decimals);
 }
@@ -1718,7 +1997,6 @@ function fromUnits(bn) {
 }
 
 async function loadLendingPanel() {
-
   try {
     const readProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl);
     const lendingRead = new ethers.Contract(LENDING.lendingAddress, LENDING_ABI, readProvider);
@@ -1728,8 +2006,10 @@ async function loadLendingPanel() {
     ]);
     document.getElementById("lending-liquidity").textContent = Number(fromUnits(liquidity)).toLocaleString();
     document.getElementById("lending-factor").textContent = factor.toString() + "%";
+    document.getElementById("lending-pool-stats").style.display = "flex";
   } catch (err) {
     console.warn("Couldn't load pool stats:", err.message);
+    document.getElementById("lending-pool-stats").style.display = "none";
   }
 
   if (!signer) {
@@ -1764,7 +2044,8 @@ async function refreshLendingPosition() {
 }
 
 async function lendingStatus(msg) {
-  document.getElementById("lending-status").textContent = msg;
+  const el = document.getElementById("lending-status");
+  el.textContent = msg;
 }
 
 async function approveAndCall(tokenAddress, amountUnits, contractCall) {
@@ -1794,7 +2075,6 @@ async function handleFaucetUsdc() {
     lendingStatus("Minted 1,000 Mock USDC.");
     celebrate({ title: "Mock USDC minted 🎉", sub: "1,000 Mock USDC landed in your wallet — ready to repay a loan or explore the pool.", explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
-    console.error(err);
     lendingStatus("Mint failed: " + (err.shortMessage || err.message));
   }
 }
@@ -1811,7 +2091,6 @@ async function handleDeposit() {
     await refreshLendingPosition();
     celebrate({ title: "Collateral deposited 🎉", sub: `${amount} cirBTC is now backing your borrowing power.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
-    console.error(err);
     lendingStatus("Deposit failed: " + (err.shortMessage || err.message));
   }
 }
@@ -1831,7 +2110,6 @@ async function handleBorrow() {
     await refreshLendingPosition();
     celebrate({ title: "Loan taken 🎉", sub: `${amount} Mock USDC borrowed against your cirBTC collateral.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
-    console.error(err);
     lendingStatus("Borrow failed: " + (err.shortMessage || err.message));
   }
 }
@@ -1848,7 +2126,6 @@ async function handleRepay() {
     await refreshLendingPosition();
     celebrate({ title: "Loan repaid 🎉", sub: `${amount} Mock USDC paid back.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
-    console.error(err);
     lendingStatus("Repay failed: " + (err.shortMessage || err.message));
   }
 }
@@ -1868,121 +2145,14 @@ async function handleWithdraw() {
     await refreshLendingPosition();
     celebrate({ title: "Collateral withdrawn 🎉", sub: `${amount} cirBTC returned to your wallet.`, explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}` });
   } catch (err) {
-    console.error(err);
     lendingStatus("Withdraw failed: " + (err.shortMessage || err.message));
   }
 }
 
-function openDeploy() {
-  document.getElementById("deploy-backdrop").classList.add("open");
-  document.getElementById("deploy-result").style.display = "none";
-  document.getElementById("deploy-status").textContent = "";
-}
-function closeDeploy() { document.getElementById("deploy-backdrop").classList.remove("open"); }
-
-async function runDeploy() {
-  const status = document.getElementById("deploy-status");
-  const metadataURI = document.getElementById("deploy-metadata").value.trim();
-
-  if (!signer) {
-    status.textContent = "Connect your wallet first.";
-    return;
-  }
-  if (!metadataURI) {
-    status.textContent = "Enter a metadata URI.";
-    return;
-  }
-
-  try {
-    const identityWrite = new ethers.Contract(ERC8004.identityRegistry, IDENTITY_ABI, signer);
-    status.textContent = "Waiting for signature…";
-    const tx = await identityWrite.register(metadataURI);
-    status.textContent = "Confirming onchain…";
-    const receipt = await tx.wait();
-
-    // Find the Transfer event in this receipt to learn the minted agent ID.
-    const iface = new ethers.Interface(IDENTITY_ABI);
-    let agentId = null;
-    for (const log of receipt.logs) {
-      try {
-        const parsed = iface.parseLog(log);
-        if (parsed && parsed.name === "Transfer") {
-          agentId = parsed.args.tokenId.toString();
-          break;
-        }
-      } catch (_) { /* not this contract's event, skip */ }
-    }
-
-    status.textContent = "Deployed.";
-    document.getElementById("deploy-agentid").textContent = agentId ?? "(check explorer)";
-    document.getElementById("deploy-txlink").href = `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`;
-    document.getElementById("deploy-result").style.display = "block";
-    closeDeploy();
-    await refreshIdentityStatus();
-    celebrate({
-      title: "Agent identity deployed 🎉",
-      sub: "Your agent now has a real, onchain ERC-8004 identity on Arc.",
-      detail: agentId ? `Agent ID #${agentId}` : "",
-      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
-    });
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Transaction failed or was rejected.";
-  }
-}
-
-/* ---------- Registration form ---------- */
-function openModal() { document.getElementById("modal-backdrop").classList.add("open"); }
-function closeModal() {
-  document.getElementById("modal-backdrop").classList.remove("open");
-  document.getElementById("form-status").textContent = "";
-}
-
-async function handleRegisterSubmit(e) {
-  e.preventDefault();
-  const status = document.getElementById("form-status");
-
-  const name = document.getElementById("f-name").value.trim();
-  const description = document.getElementById("f-desc").value.trim();
-  const category = document.getElementById("f-category").value;
-  const url = document.getElementById("f-url").value.trim();
-
-  if (!signer) {
-    status.textContent = "Connect your wallet first.";
-    return;
-  }
-  if (!contract) {
-    status.textContent = "Registry contract address isn't configured yet — set CONFIG.registryAddress after deploying.";
-    return;
-  }
-
-  try {
-    status.textContent = "Waiting for signature…";
-    const tx = await contract.register(name, description, category, url);
-    status.textContent = "Confirming onchain…";
-    await tx.wait();
-    status.textContent = "Registered. Refreshing list…";
-    await loadAgents();
-    closeModal();
-    celebrate({
-      title: "You're on the Beacon 🎉",
-      sub: `"${name}" is now live in the registry for anyone on Arc to find.`,
-      detail: "",
-      explorerUrl: `${CONFIG.blockExplorerUrl}/tx/${tx.hash}`
-    });
-  } catch (err) {
-    console.error(err);
-    status.textContent = "Transaction failed or was rejected.";
-  }
-}
-
-/* ---------- Wire up ---------- */
+/* ---------- Event wiring ---------- */
 document.getElementById("connect-btn").addEventListener("click", connectWallet);
 document.getElementById("register-btn").addEventListener("click", () => {
-  if (!signer) {
-    connectWallet();
-    return;
-  }
+  if (!signer) { connectWallet(); return; }
   if (!hasIdentity) {
     document.getElementById("hero-hint").textContent = "Deploy an agent identity first — opening that now.";
     openDeploy();
@@ -2002,6 +2172,10 @@ document.getElementById("modal-cancel").addEventListener("click", closeModal);
 document.getElementById("register-form").addEventListener("submit", handleRegisterSubmit);
 document.getElementById("search").addEventListener("input", applyFilter);
 document.getElementById("modal-backdrop").addEventListener("click", (e) => { if (e.target.id === "modal-backdrop") closeModal(); });
+document.getElementById("detail-close").addEventListener("click", () => document.getElementById("detail-backdrop").classList.remove("open"));
+document.getElementById("detail-backdrop").addEventListener("click", (e) => { if (e.target.id === "detail-backdrop") document.getElementById("detail-backdrop").classList.remove("open"); });
+document.getElementById("celebrate-close").addEventListener("click", () => document.getElementById("celebrate-backdrop").classList.remove("open"));
+document.getElementById("celebrate-backdrop").addEventListener("click", (e) => { if (e.target.id === "celebrate-backdrop") document.getElementById("celebrate-backdrop").classList.remove("open"); });
 
 document.getElementById("retry-btn").addEventListener("click", () => loadAgents());
 document.getElementById("tab-registry").addEventListener("click", () => switchTab("registry"));
@@ -2022,6 +2196,7 @@ document.getElementById("deposit-btn").addEventListener("click", handleDeposit);
 document.getElementById("borrow-btn").addEventListener("click", handleBorrow);
 document.getElementById("repay-btn").addEventListener("click", handleRepay);
 document.getElementById("withdraw-btn").addEventListener("click", handleWithdraw);
+
 renderTemplates();
 
 if (document.readyState === "complete") {
@@ -2029,9 +2204,12 @@ if (document.readyState === "complete") {
   pollWelcomeActivity();
   pollIdentityCount();
 } else {
-  window.addEventListener("load", () => { setTimeout(() => loadAgents(), 800); pollWelcomeActivity(); pollIdentityCount(); });
+  window.addEventListener("load", () => { 
+    setTimeout(() => loadAgents(), 800); 
+    pollWelcomeActivity(); 
+    pollIdentityCount(); 
+  });
 }
-// Heavier scans than the agent registry read, so they refresh less often.
 setInterval(pollWelcomeActivity, 90000);
 setInterval(pollIdentityCount, 90000);
 </script>

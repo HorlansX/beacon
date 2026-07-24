@@ -6,7 +6,8 @@
     "dev": "serve ."
   },
   "dependencies": {
-    "ethers": "6.13.1"
+    "ethers": "6.13.1",
+    "thirdweb": "^5"
   },
   "devDependencies": {
     "serve": "^14.2.3"

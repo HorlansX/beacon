@@ -1,20 +1,12 @@
 const { ethers } = require("ethers");
 
-/* ---------- Config (mirrors frontend/index.html CONFIG / ERC8004) ---------- */
+/* ---------- Config ---------- */
 const RPC_URL = "https://rpc.testnet.arc.network";
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BEACON_REGISTRY = "0x3dEE45B67b8A3163fdBa98eE742931aAd6594477";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
 
-// Same bounded-but-generous scan window used elsewhere in Beacon, kept
-// consistent so results here match what the Explorer tab shows.
-// Reduced from 500k now that batching is disabled — every chunk is now a
-// separate, real HTTP request instead of a bundled one, so a smaller
-// window keeps this well within the function's time limit. Still covers
-// a meaningful, recent window; a direct agent-ID lookup by number doesn't
-// depend on this at all (it's only used for address-based lookups and the
-// reputation history scan).
 const LOOKBACK_BLOCKS = 100_000;
 const CHUNK_SIZE = 10_000;
 
@@ -63,10 +55,15 @@ function timeAgo(unixSeconds) {
   return Math.floor(diff / 86400) + "d ago";
 }
 
-module.exports = async function handler(req, res) {
-  // Free and public — no auth, no wallet, no write access. Pure read.
+/* ---------- CORS ---------- */
+function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-payment, payment-signature");
+}
+
+module.exports = async function handler(req, res) {
+  setCors(res);
   if (req.method === "OPTIONS") { res.status(200).end(); return; }
 
   const rawInput = (req.query.id || "").toString().trim();
@@ -76,21 +73,24 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    // Arc's public RPC doesn't handle ethers' automatic request batching
-    // cleanly (manifests as "could not coalesce error"), and that batching
-    // happens on an internal timer — not just when calls are literally
-    // simultaneous — so sequential awaits alone don't prevent it. Disabling
-    // batching outright (batchMaxCount: 1) is the actual fix.
     const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
+    let lookupMethod = "id"; // "id" or "address"
+
     if (/^\d+$/.test(rawInput)) {
       agentId = BigInt(rawInput);
+      lookupMethod = "id";
     } else if (ethers.isAddress(rawInput)) {
+      lookupMethod = "address";
       const balance = await identity.balanceOf(rawInput);
       if (balance === 0n) {
-        res.status(404).json({ ok: false, error: "This address has never held an ERC-8004 agent identity on Arc (confirmed via balanceOf, not just a recent-window scan)." });
+        res.status(404).json({ 
+          ok: false, 
+          error: "This address has never held an ERC-8004 agent identity on Arc (confirmed via balanceOf).",
+          address: rawInput
+        });
         return;
       }
       const currentBlock = await provider.getBlockNumber();
@@ -98,7 +98,12 @@ module.exports = async function handler(req, res) {
       const mintFilter = identity.filters.Transfer(ZERO_ADDRESS, rawInput, null);
       const mints = await queryLogsChunked(identity, mintFilter, fromBlock, currentBlock, CHUNK_SIZE);
       if (mints.length === 0) {
-        res.status(404).json({ ok: false, error: `This address holds ${balance.toString()} identity(ies), but the mint is outside our ~${LOOKBACK_BLOCKS.toLocaleString()}-block scan window. Look it up by agent ID directly if you know it.` });
+        res.status(404).json({ 
+          ok: false, 
+          error: `This address holds ${balance.toString()} identity(ies), but the mint is outside our ~${LOOKBACK_BLOCKS.toLocaleString()}-block scan window.`,
+          address: rawInput,
+          balance: balance.toString()
+        });
         return;
       }
       agentId = mints[mints.length - 1].args.tokenId;
@@ -107,7 +112,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // ownerOf is required — if this fails, the agent genuinely doesn't exist.
+    // ownerOf is required
     let owner;
     try {
       owner = await identity.ownerOf(agentId);
@@ -120,10 +125,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // tokenURI is metadata only — if this specific call fails (some agents
-    // register without setting one, or the call reverts for other reasons),
-    // that shouldn't sink an otherwise-successful lookup. We already have
-    // the important part (owner) confirmed above.
+    // tokenURI is optional
     let tokenURI = null;
     let tokenUriError = null;
     try {
@@ -132,22 +134,24 @@ module.exports = async function handler(req, res) {
       tokenUriError = err.shortMessage || err.reason || err.message || String(err);
     }
 
+    // Reputation scan
     const reputation = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
     const currentBlock2 = await provider.getBlockNumber();
     const fromBlock2 = Math.max(0, currentBlock2 - LOOKBACK_BLOCKS);
     const repFilter = reputation.filters.NewFeedback(agentId, null);
     const repEvents = await queryLogsChunked(reputation, repFilter, fromBlock2, currentBlock2, CHUNK_SIZE);
 
+    // Metadata fetch
     let metadata = null;
     const fetchUrl = toFetchableUri(tokenURI);
     if (fetchUrl) {
       try {
         const resp = await fetch(fetchUrl, { signal: AbortSignal.timeout(5000) });
         if (resp.ok) metadata = await resp.json();
-      } catch (err) { /* best-effort only */ }
+      } catch (err) {}
     }
 
-    // Cross-reference Beacon's own registry.
+    // Beacon cross-reference
     let beaconEntry = null;
     try {
       const beaconRegistry = new ethers.Contract(BEACON_REGISTRY, BEACON_REGISTRY_ABI, provider);
@@ -166,17 +170,19 @@ module.exports = async function handler(req, res) {
           };
         }
       }
-    } catch (err) { /* Beacon cross-reference is best-effort context, not required */ }
+    } catch (err) {}
 
+    // Activity tracking
     const hasReputation = repEvents.length > 0;
     let lastActivity = null;
     if (hasReputation) {
       try {
         const block = await repEvents[repEvents.length - 1].getBlock();
         lastActivity = { timestamp: block.timestamp, relative: timeAgo(block.timestamp) };
-      } catch (err) { /* leave null if block lookup fails */ }
+      } catch (err) {}
     }
 
+    // Build reputation events list
     const reputationEvents = repEvents.slice().reverse().slice(0, 25).map(e => ({
       tag: e.args.tag1 || "feedback",
       score: e.args.value?.toString?.() ?? null,
@@ -184,6 +190,26 @@ module.exports = async function handler(req, res) {
       explorerUrl: `${BLOCK_EXPLORER_URL}/tx/${e.transactionHash}`
     }));
 
+    // Calculate aggregate reputation score
+    let aggregateScore = null;
+    if (hasReputation) {
+      const scores = repEvents.map(e => {
+        const val = e.args.value;
+        return val ? Number(val) : 0;
+      }).filter(s => !isNaN(s));
+      if (scores.length > 0) {
+        const sum = scores.reduce((a, b) => a + b, 0);
+        aggregateScore = {
+          total: sum,
+          average: (sum / scores.length).toFixed(2),
+          count: scores.length,
+          min: Math.min(...scores),
+          max: Math.max(...scores)
+        };
+      }
+    }
+
+    // Build summary
     let summary = `Agent #${agentId.toString()} is owned by ${owner}.`;
     if (metadata?.description) {
       const desc = metadata.description.length > 140 ? metadata.description.slice(0, 140) + "…" : metadata.description;
@@ -206,6 +232,7 @@ module.exports = async function handler(req, res) {
       registeredOnBeacon: beaconEntry,
       reputation: {
         totalEvents: repEvents.length,
+        aggregateScore,
         events: reputationEvents
       },
       trustCard: {
@@ -217,7 +244,8 @@ module.exports = async function handler(req, res) {
       },
       summary,
       explorerUrl: `${BLOCK_EXPLORER_URL}/token/${IDENTITY_REGISTRY}?a=${agentId.toString()}`,
-      scannedBlocks: [fromBlock2, currentBlock2]
+      scannedBlocks: [fromBlock2, currentBlock2],
+      lookupMethod
     });
   } catch (err) {
     res.status(500).json({

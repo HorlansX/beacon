@@ -12,6 +12,9 @@
     },
     "api/agent/[id].js": {
       "maxDuration": 60
+    },
+    "api/agent/[id]/full.js": {
+      "maxDuration": 60
     }
   }
 }
