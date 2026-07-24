@@ -1010,6 +1010,10 @@ const CONFIG = {
 // the real probe below finishes.
 CONFIG.rpcUrl = CONFIG.rpcUrls[0];
 
+// Referenced throughout as the expected network for ethers' staticNetwork
+// option (skips a redundant network-detection call on every provider).
+const ARC_NETWORK = new ethers.Network("arc-testnet", 5042002);
+
 // Actually test each RPC endpoint in order and use the first one that
 // responds correctly, instead of assuming the first URL always works.
 async function resolveWorkingRpc() {
