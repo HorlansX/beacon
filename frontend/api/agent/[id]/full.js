@@ -2,40 +2,19 @@ const { ethers } = require("ethers");
 const { createThirdwebClient, defineChain } = require("thirdweb");
 const { facilitator, settlePayment } = require("thirdweb/x402");
 
-/* ---------- Config ---------- */
-const RPC_URLS = [
-  "https://rpc.testnet.arc.network",
-  "https://rpc.testnet.arc.io",
-  "https://rpc.blockdaemon.testnet.arc.io",
-  "https://rpc.drpc.testnet.arc.io",
-  "https://5042002.rpc.thirdweb.com"
-];
-
-async function getWorkingProvider() {
-  for (const url of RPC_URLS) {
-    try {
-      const provider = new ethers.JsonRpcProvider(url, undefined, { batchMaxCount: 1 });
-      await provider.getBlockNumber();
-      return provider;
-    } catch (e) { console.warn("RPC failed:", url); }
-  }
-  throw new Error("All RPC endpoints failed");
-}
+const RPC_URL = "https://5042002.rpc.thirdweb.com";
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
-
 const LOOKBACK_BLOCKS = 2_000_000;
 const CHUNK_SIZE = 10_000;
-const PRICE_USD = "$0.02";
-
+const PRICE_USD = ".02";
 const SERVER_WALLET_ADDRESS = "0x6E1633ED0539eC24622e9714e27446190578927A";
 
 const arcTestnet = defineChain({
   id: 5042002,
   name: "Arc Testnet",
   rpc: RPC_URL,
-  testnet: true,
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   blockExplorers: [{ name: "Arcscan", url: BLOCK_EXPLORER_URL }]
 });
@@ -49,7 +28,6 @@ const REPUTATION_ABI = [
   "event NewFeedback(uint256 indexed agentId, address indexed clientAddress, uint64 feedbackIndex, int128 value, uint8 valueDecimals, string indexed indexedTag1, string tag1, string tag2, string endpoint, string feedbackURI, bytes32 feedbackHash)"
 ];
 
-/* ---------- Helpers ---------- */
 async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
@@ -90,13 +68,11 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // ---------- Payment gate ----------
   try {
     const client = createThirdwebClient({ secretKey });
     const twFacilitator = facilitator({ client, serverWalletAddress: SERVER_WALLET_ADDRESS });
-
     const paymentData = req.headers["x-payment"] || req.headers["payment-signature"];
-    const resourceUrl = `https://beacon-arc.vercel.app/api/agent/${rawInput}/full`;
+    const resourceUrl = https://beacon-arc.vercel.app/api/agent//full;
 
     const result = await settlePayment({
       resourceUrl,
@@ -120,17 +96,16 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // ---------- Payment confirmed — do the actual (paid) work ----------
   try {
     const agentId = BigInt(rawInput);
-    const provider = new ethers.JsonRpcProvider(RPC_URL, ARC_NETWORK, { batchMaxCount: 1, staticNetwork: ARC_NETWORK });
+    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let owner;
     try {
       owner = await identity.ownerOf(agentId);
     } catch (err) {
-      res.status(404).json({ ok: false, error: `No agent found with ID ${agentId.toString()}.` });
+      res.status(404).json({ ok: false, error: No agent found with ID . });
       return;
     }
 
@@ -154,7 +129,6 @@ module.exports = async function handler(req, res) {
       } catch (err) {}
     }
 
-    // Calculate aggregate stats for full history
     let aggregateScore = null;
     let tagBreakdown = {};
     if (repEvents.length > 0) {
@@ -186,7 +160,7 @@ module.exports = async function handler(req, res) {
       tag: e.args.tag1 || "feedback",
       score: e.args.value?.toString?.() ?? null,
       txHash: e.transactionHash,
-      explorerUrl: `${BLOCK_EXPLORER_URL}/tx/${e.transactionHash}`
+      explorerUrl: ${BLOCK_EXPLORER_URL}/tx/
     }));
 
     res.status(200).json({
@@ -202,7 +176,7 @@ module.exports = async function handler(req, res) {
         events: fullHistory
       },
       scannedBlocks: [fromBlock, currentBlock],
-      note: `Full history within the last ~${LOOKBACK_BLOCKS.toLocaleString()} blocks (paid tier) — significantly deeper than the free endpoint's ~100,000-block window, though still not a from-genesis guarantee.`
+      note: Full history within the last ~ blocks (paid tier).
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: "Something went wrong reading Arc testnet.", debug: err.shortMessage || err.message || String(err) });
