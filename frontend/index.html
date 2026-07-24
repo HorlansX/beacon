@@ -1006,6 +1006,35 @@ const CONFIG = {
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   blockExplorerUrl: "https://testnet.arcscan.app"
 };
+// Default to the first candidate so nothing is ever undefined, even before
+// the real probe below finishes.
+CONFIG.rpcUrl = CONFIG.rpcUrls[0];
+
+// Actually test each RPC endpoint in order and use the first one that
+// responds correctly, instead of assuming the first URL always works.
+async function resolveWorkingRpc() {
+  for (const url of CONFIG.rpcUrls) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result) {
+          CONFIG.rpcUrl = url;
+          console.log("[Beacon] Using RPC:", url);
+          return url;
+        }
+      }
+    } catch (err) {
+      console.warn("[Beacon] RPC candidate failed:", url, err.message);
+    }
+  }
+  console.warn("[Beacon] All RPC candidates failed probe, defaulting to first:", CONFIG.rpcUrls[0]);
+  return CONFIG.rpcUrls[0];
+}
 
 const ABI = [
   "function register(string name, string description, string category, string url) returns (uint256)",
@@ -2214,16 +2243,17 @@ document.getElementById("withdraw-btn").addEventListener("click", handleWithdraw
 
 renderTemplates();
 
-if (document.readyState === "complete") {
-  setTimeout(() => loadAgents(), 800);
+async function initBeacon() {
+  await resolveWorkingRpc();
+  setTimeout(() => loadAgents(), 200);
   pollWelcomeActivity();
   pollIdentityCount();
+}
+
+if (document.readyState === "complete") {
+  initBeacon();
 } else {
-  window.addEventListener("load", () => { 
-    setTimeout(() => loadAgents(), 800); 
-    pollWelcomeActivity(); 
-    pollIdentityCount(); 
-  });
+  window.addEventListener("load", initBeacon);
 }
 setInterval(pollWelcomeActivity, 90000);
 setInterval(pollIdentityCount, 90000);
