@@ -35,6 +35,7 @@ const arcTestnet = defineChain({
   id: 5042002,
   name: "Arc Testnet",
   rpc: RPC_URL,
+  testnet: true,
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
   blockExplorers: [{ name: "Arcscan", url: BLOCK_EXPLORER_URL }]
 });
@@ -122,7 +123,7 @@ module.exports = async function handler(req, res) {
   // ---------- Payment confirmed — do the actual (paid) work ----------
   try {
     const agentId = BigInt(rawInput);
-    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
+    const provider = new ethers.JsonRpcProvider(RPC_URL, ARC_NETWORK, { batchMaxCount: 1, staticNetwork: ARC_NETWORK });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let owner;

@@ -90,7 +90,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
+    const provider = new ethers.JsonRpcProvider(RPC_URL, ARC_NETWORK, { batchMaxCount: 1, staticNetwork: ARC_NETWORK });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
