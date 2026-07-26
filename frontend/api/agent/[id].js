@@ -73,12 +73,16 @@ module.exports = async function handler(req, res) {
     return;
   }
 
+  const t0 = Date.now();
+  const elapsed = () => `${Date.now() - t0}ms`;
   try {
     const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
     let lookupMethod = "id";
+
+    console.log(`[${elapsed()}] starting lookup for "${rawInput}"`);
 
     if (/^\d+$/.test(rawInput)) {
       agentId = BigInt(rawInput);
@@ -116,6 +120,7 @@ module.exports = async function handler(req, res) {
     let owner;
     try {
       owner = await identity.ownerOf(agentId);
+      console.log(`[${elapsed()}] ownerOf resolved: ${owner}`);
     } catch (err) {
       res.status(404).json({
         ok: false,
@@ -129,8 +134,10 @@ module.exports = async function handler(req, res) {
     let tokenUriError = null;
     try {
       tokenURI = await identity.tokenURI(agentId);
+      console.log(`[${elapsed()}] tokenURI resolved`);
     } catch (err) {
       tokenUriError = err.shortMessage || err.reason || err.message || String(err);
+      console.log(`[${elapsed()}] tokenURI failed: ${tokenUriError}`);
     }
 
     const reputation = new ethers.Contract(REPUTATION_REGISTRY, REPUTATION_ABI, provider);
@@ -138,6 +145,7 @@ module.exports = async function handler(req, res) {
     const fromBlock2 = Math.max(0, currentBlock2 - LOOKBACK_BLOCKS);
     const repFilter = reputation.filters.NewFeedback(agentId, null);
     const repEvents = await queryLogsChunked(reputation, repFilter, fromBlock2, currentBlock2, CHUNK_SIZE);
+    console.log(`[${elapsed()}] reputation scan done — ${repEvents.length} events`);
 
     let metadata = null;
     const fetchUrl = toFetchableUri(tokenURI);
@@ -146,6 +154,7 @@ module.exports = async function handler(req, res) {
         const resp = await fetch(fetchUrl, { signal: AbortSignal.timeout(5000) });
         if (resp.ok) metadata = await resp.json();
       } catch (err) { /* best-effort */ }
+      console.log(`[${elapsed()}] metadata fetch attempted`);
     }
 
     let beaconEntry = null;
@@ -167,6 +176,7 @@ module.exports = async function handler(req, res) {
         }
       }
     } catch (err) { /* best-effort */ }
+    console.log(`[${elapsed()}] beacon cross-reference done`);
 
     const hasReputation = repEvents.length > 0;
     let lastActivity = null;
@@ -175,6 +185,7 @@ module.exports = async function handler(req, res) {
         const block = await repEvents[repEvents.length - 1].getBlock();
         lastActivity = { timestamp: block.timestamp, relative: timeAgo(block.timestamp) };
       } catch (err) { /* leave null */ }
+      console.log(`[${elapsed()}] lastActivity block lookup done`);
     }
 
     const reputationEvents = repEvents.slice().reverse().slice(0, 25).map(e => ({
@@ -214,6 +225,7 @@ module.exports = async function handler(req, res) {
       summary += ` It's also listed on Beacon as "${beaconEntry.name}", categorized under ${beaconEntry.category || "other"}.`;
     }
 
+    console.log(`[${elapsed()}] all done, sending response`);
     res.status(200).json({
       ok: true,
       agentId: agentId.toString(),
