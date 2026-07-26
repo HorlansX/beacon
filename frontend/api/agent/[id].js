@@ -76,6 +76,14 @@ function setCors(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-payment, payment-signature");
 }
 
+// Best-effort in-memory cache — persists only within a warm serverless
+// instance (not guaranteed across cold starts or different instances), but
+// directly helps the common case of the same agent being looked up
+// repeatedly in a short window, which is exactly when we've observed Arc's
+// public RPC start struggling.
+const CACHE_TTL_MS = 60_000;
+const cache = new Map();
+
 module.exports = async function handler(req, res) {
   setCors(res);
   if (req.method === "OPTIONS") { res.status(200).end(); return; }
@@ -83,6 +91,13 @@ module.exports = async function handler(req, res) {
   const rawInput = (req.query.id || "").toString().trim();
   if (!rawInput) {
     res.status(400).json({ ok: false, error: "Provide an agent ID or wallet address, e.g. /api/agent/123" });
+    return;
+  }
+
+  const cached = cache.get(rawInput);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+    res.setHeader("X-Cache", "HIT");
+    res.status(200).json(cached.body);
     return;
   }
 
@@ -241,7 +256,7 @@ module.exports = async function handler(req, res) {
     }
 
     console.log(`[${elapsed()}] all done, sending response`);
-    res.status(200).json({
+    const responseBody = {
       ok: true,
       agentId: agentId.toString(),
       owner,
@@ -265,7 +280,10 @@ module.exports = async function handler(req, res) {
       explorerUrl: `${BLOCK_EXPLORER_URL}/token/${IDENTITY_REGISTRY}?a=${agentId.toString()}`,
       scannedBlocks: [fromBlock2, currentBlock2],
       lookupMethod
-    });
+    };
+    cache.set(rawInput, { body: responseBody, at: Date.now() });
+    res.setHeader("X-Cache", "MISS");
+    res.status(200).json(responseBody);
   } catch (err) {
     res.status(500).json({
       ok: false,
