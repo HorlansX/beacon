@@ -10,7 +10,7 @@ const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 const BEACON_REGISTRY = "0x3dEE45B67b8A3163fdBa98eE742931aAd6594477";
 const BLOCK_EXPLORER_URL = "https://testnet.arcscan.app";
-const LOOKBACK_BLOCKS = 100_000;
+const LOOKBACK_BLOCKS = 50_000;
 const CHUNK_SIZE = 10_000;
 
 const IDENTITY_ABI = [
@@ -36,7 +36,7 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 // (observed: ~90 actual HTTP calls for what should be ~15 logical ones).
 // Processing a limited number at a time trades a little latency for much
 // more reliable completion.
-async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize, concurrency = 3) {
+async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize, concurrency = 2) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
     ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
@@ -48,6 +48,9 @@ async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize,
       batch.map(([start, end]) => contract.queryFilter(filter, start, end))
     );
     results.push(...batchResults);
+    if (i + concurrency < ranges.length) {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
   }
   return results.flat();
 }
