@@ -31,14 +31,24 @@ const BEACON_REGISTRY_ABI = [
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize) {
+// Firing all chunks fully in parallel appears to overwhelm Arc's public
+// RPC under load, triggering ethers' automatic retry logic repeatedly
+// (observed: ~90 actual HTTP calls for what should be ~15 logical ones).
+// Processing a limited number at a time trades a little latency for much
+// more reliable completion.
+async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize, concurrency = 3) {
   const ranges = [];
   for (let start = fromBlock; start <= toBlock; start += chunkSize) {
     ranges.push([start, Math.min(start + chunkSize - 1, toBlock)]);
   }
-  const results = await Promise.all(
-    ranges.map(([start, end]) => contract.queryFilter(filter, start, end))
-  );
+  const results = [];
+  for (let i = 0; i < ranges.length; i += concurrency) {
+    const batch = ranges.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(([start, end]) => contract.queryFilter(filter, start, end))
+    );
+    results.push(...batchResults);
+  }
   return results.flat();
 }
 
@@ -76,7 +86,9 @@ module.exports = async function handler(req, res) {
   const t0 = Date.now();
   const elapsed = () => `${Date.now() - t0}ms`;
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL, undefined, { batchMaxCount: 1 });
+    // staticNetwork avoids ethers re-verifying the chain on every call —
+    // one less source of redundant requests against an already-loaded RPC.
+    const provider = new ethers.JsonRpcProvider(RPC_URL, 5042002, { batchMaxCount: 1, staticNetwork: true });
     const identity = new ethers.Contract(IDENTITY_REGISTRY, IDENTITY_ABI, provider);
 
     let agentId;
