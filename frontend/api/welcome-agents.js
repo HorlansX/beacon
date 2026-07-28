@@ -1,7 +1,16 @@
 const { ethers } = require("ethers");
 
 /* ---------- Config (mirrors frontend/index.html CONFIG / ERC8004) ---------- */
-const RPC_URL = "https://rpc.testnet.arc.network";
+// Multiple candidates since Arc's official RPC has proven flaky in practice
+// (intermittent timeouts and malformed error responses). Same list the
+// frontend uses, tried in order until one works.
+const RPC_URLS = [
+  "https://rpc.testnet.arc.network",       // MetaMask default / Arc official
+  "https://rpc.testnet.arc.io",            // Arc docs primary
+  "https://rpc.blockdaemon.testnet.arc.io",// Blockdaemon fallback
+  "https://rpc.drpc.testnet.arc.io",       // dRPC fallback
+  "https://5042002.rpc.thirdweb.com"       // Thirdweb fallback
+];
 const IDENTITY_REGISTRY = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
 const REPUTATION_REGISTRY = "0x8004B663056A597Dffe9eCcC1965A193B7388713";
 
@@ -54,6 +63,22 @@ async function queryLogsChunked(contract, filter, fromBlock, toBlock, chunkSize)
   return results.flat();
 }
 
+// Actually test each RPC endpoint with a real call before committing to it,
+// instead of assuming the first (official) one always works.
+async function resolveWorkingProvider() {
+  for (const url of RPC_URLS) {
+    try {
+      const provider = new ethers.JsonRpcProvider(url);
+      await provider.getBlockNumber(); // real round-trip, not just construction
+      console.log(`Using RPC: ${url}`);
+      return provider;
+    } catch (err) {
+      console.log(`RPC candidate failed: ${url} - ${err.shortMessage || err.message}`);
+    }
+  }
+  throw new Error("All RPC candidates failed - Arc testnet may be down");
+}
+
 module.exports = async function handler(req, res) {
   // Verify this request actually came from Vercel Cron, not a random visitor.
   const cronSecret = process.env.CRON_SECRET;
@@ -73,7 +98,7 @@ module.exports = async function handler(req, res) {
   const startTime = Date.now();
   const elapsed = () => `${Date.now() - startTime}ms`;
   try {
-    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const provider = await resolveWorkingProvider();
     const wallet = new ethers.Wallet(privateKey, provider);
     const beaconAddress = wallet.address;
 
